@@ -5,7 +5,10 @@ import { t } from '../i18n.js';
 // ToolManager delegates to these cohesive behaviors; this is the existing host.
 export const memberTool = {
   _memberDown(e) {
-    const snapped = this._getSnappedPos(e);
+    return this._memberPoint(this._getSnappedPos(e));
+  },
+
+  _memberPoint(snapped) {
 
     if (this.state.memberDraftType === 'column') {
       this._placeColumn(snapped);

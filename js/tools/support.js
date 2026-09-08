@@ -3,8 +3,11 @@
 // ToolManager delegates to these cohesive behaviors; this is the existing host.
 export const supportTool = {
   _supportDown(e) {
-    const snapped = this._getSnappedPos(e);
-    const tolerance = this._pickTolerance();
+    return this._supportPoint(this._getSnappedPos(e));
+  },
+
+  _supportPoint(snapped, { exact = false } = {}) {
+    const tolerance = exact ? 1 : this._pickTolerance();
 
     // Check if clicking on an existing support
     const existing = this._findSelectableSupportAt(snapped.x, snapped.y, tolerance);

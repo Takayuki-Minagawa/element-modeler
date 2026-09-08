@@ -3,7 +3,10 @@
 // ToolManager delegates to these cohesive behaviors; this is the existing host.
 export const measureTool = {
   _measureDown(e) {
-    const snapped = this._getSnappedPos(e);
+    return this._measurePoint(this._getSnappedPos(e));
+  },
+
+  _measurePoint(snapped) {
     if (!this._measureStart) {
       this._measureStart = { x: snapped.x, y: snapped.y };
       this.canvas2d.measure = null;

@@ -271,6 +271,7 @@ export class ToolManager {
     } else if (tool === 'measure') {
       this._measureDown(e);
     }
+    this.onUpdate();
   }
 
   _onMouseMove(e) {
@@ -391,6 +392,40 @@ export class ToolManager {
     this._measureStart = null;
     this.canvas2d.preview = null;
     this.canvas2d.measure = null;
+  }
+
+  // Public input path for the coordinate form; never fabricates mouse events.
+  inputPoint(x, y) {
+    const handlers = { member: '_memberPoint', surface: '_surfacePoint', load: '_loadPoint',
+      support: '_supportPoint', measure: '_measurePoint' };
+    const handler = handlers[this.state.currentTool];
+    if (!handler || !Number.isFinite(x) || !Number.isFinite(y) ||
+        Math.abs(x) > 1e9 || Math.abs(y) > 1e9) return false;
+    this[handler]({ x, y }, { exact: true });
+    this.onUpdate();
+    return true;
+  }
+
+  getPlacementState() {
+    const tool = this.state.currentTool;
+    const start = { member: this._memberStart, surface: this._surfaceStart,
+      load: this._loadStart, measure: this._measureStart }[tool];
+    const polyline = tool === 'surface' && this._getEffectiveSurfaceMode() === 'polyline';
+    const points = polyline ? this._surfacePolyline : start ? [start] : [];
+    const measure = this.canvas2d.measure;
+    const measurement = tool === 'measure' && measure?.done
+      ? { dx: measure.x2 - measure.x1, dy: measure.y2 - measure.y1,
+        length: Math.hypot(measure.x2 - measure.x1, measure.y2 - measure.y1) } : null;
+    return { measurement, isPolyline: polyline, canInput: ['member', 'surface', 'load', 'support', 'measure'].includes(tool),
+      points, canFinish: polyline && points.length >= 3,
+      canCancel: points.length > 0 || Boolean(this.canvas2d.measure) || this.isSplitPointActive() };
+  }
+
+  finishPlacement() {
+    if (!this.getPlacementState().canFinish) return false;
+    this._finishSurfacePolyline();
+    this.onUpdate();
+    return true;
   }
 
   restoreHistory(direction) {
@@ -534,8 +569,12 @@ export class ToolManager {
 
   // --- Member Tool ---
 
+  _memberPoint(...args) {
+    return this._runModelCommand(() => memberTool._memberPoint.apply(this, args));
+  }
+
   _memberDown(...args) {
-    return this._runModelCommand(() => memberTool._memberDown.apply(this, args));
+    return memberTool._memberDown.apply(this, args);
   }
 
   _placeColumn(...args) {
@@ -574,8 +613,12 @@ export class ToolManager {
     return surfaceTool._getRoofOptions.apply(this, args);
   }
 
+  _surfacePoint(...args) {
+    return this._runModelCommand(() => surfaceTool._surfacePoint.apply(this, args));
+  }
+
   _surfaceDown(...args) {
-    return this._runModelCommand(() => surfaceTool._surfaceDown.apply(this, args));
+    return surfaceTool._surfaceDown.apply(this, args);
   }
 
   _surfaceMove(...args) {
@@ -596,8 +639,12 @@ export class ToolManager {
 
   // --- Load Tool ---
 
+  _loadPoint(...args) {
+    return this._runModelCommand(() => loadTool._loadPoint.apply(this, args));
+  }
+
   _loadDown(...args) {
-    return this._runModelCommand(() => loadTool._loadDown.apply(this, args));
+    return loadTool._loadDown.apply(this, args);
   }
 
   _loadMove(...args) {
@@ -605,6 +652,10 @@ export class ToolManager {
   }
 
   // --- Measure Tool ---
+
+  _measurePoint(...args) {
+    return measureTool._measurePoint.apply(this, args);
+  }
 
   _measureDown(...args) {
     return measureTool._measureDown.apply(this, args);
@@ -616,8 +667,12 @@ export class ToolManager {
 
   // --- Support Tool ---
 
+  _supportPoint(...args) {
+    return this._runModelCommand(() => supportTool._supportPoint.apply(this, args));
+  }
+
   _supportDown(...args) {
-    return this._runModelCommand(() => supportTool._supportDown.apply(this, args));
+    return supportTool._supportDown.apply(this, args);
   }
 
   // --- Status ---

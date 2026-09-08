@@ -5,7 +5,10 @@ import { t } from '../i18n.js';
 // ToolManager delegates to these cohesive behaviors; this is the existing host.
 export const loadTool = {
   _loadDown(e) {
-    const snapped = this._getSnappedPos(e);
+    return this._loadPoint(this._getSnappedPos(e));
+  },
+
+  _loadPoint(snapped) {
     const type = this.state.loadDraftType;
 
     if (type === 'pointLoad') {

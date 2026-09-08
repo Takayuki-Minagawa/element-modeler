@@ -357,6 +357,8 @@ function activatePlanInput() {
   activeView = '2d';
   tab2d.classList.add('active');
   tab3d.classList.remove('active');
+  tab2d.setAttribute('aria-pressed', 'true');
+  tab3d.setAttribute('aria-pressed', 'false');
   canvasEl.hidden = false;
   viewerContainer.hidden = true;
   document.getElementById('viewer-tools').hidden = true;
@@ -372,6 +374,8 @@ tab3d.addEventListener('click', async () => {
   activeView = '3d';
   tab3d.classList.add('active');
   tab2d.classList.remove('active');
+  tab2d.setAttribute('aria-pressed', 'false');
+  tab3d.setAttribute('aria-pressed', 'true');
   canvasEl.hidden = true;
   canvas2d.setActive(false);
   viewerContainer.hidden = false;
@@ -784,7 +788,7 @@ window.addEventListener('keydown', (e) => {
 }, true);
 
 // --- Plan-focused workspace ---
-workspace = initWorkspace({ state, history, ui, toolManager, openRecovery: () => recoveryUI.open() });
+workspace = initWorkspace({ state, history, ui, toolManager, activatePlanInput, openRecovery: () => recoveryUI.open() });
 
 // --- Start ---
 
