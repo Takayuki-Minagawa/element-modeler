@@ -1,3 +1,4 @@
+import { toolForKey } from './keyboard.js';
 import { executeModelMutation } from './commands/model-command.js';
 import { renderDiagnostics } from './ui/diagnostics.js';
 import { memberProperties } from './ui/properties/member.js';
@@ -31,9 +32,7 @@ export class UI {
   _setupToolbar() {
     // Tool selector combobox
     document.getElementById('sel-tool').addEventListener('change', e => {
-      this.state.currentTool = e.target.value;
-      this._updateToolUI();
-      this.callbacks.onToolChange?.(this.state.currentTool);
+      this.setTool(e.target.value);
     });
 
     // Snap toggle
@@ -128,39 +127,34 @@ export class UI {
 
     // Active layer
     document.getElementById('sel-active-layer').addEventListener('change', e => {
-      this.state.activeLevelId = e.target.value;
-      this._syncWallHeightInputs(false);
-      this._updateMemberLayerHint();
-      this.callbacks.onLayerChange?.(this.state.activeLevelId);
+      this.setPlacement({ activeLevelId: e.target.value });
     });
 
     // Member default type
     document.getElementById('sel-member-type').addEventListener('change', e => {
-      this.state.memberDraftType = e.target.value;
-      this._updateMemberLayerHint();
-      this.refreshDraftSectionSelectors();
+      this.setTool('member', e.target.value);
     });
 
     // Sticky ("paste") draft section for new members
     document.getElementById('sel-member-section')?.addEventListener('change', e => {
       this.state.setDraftSectionName('member', this.state.memberDraftType, e.target.value);
       this.refreshDraftSectionSelectors();
+      this.callbacks.onPropertyChange?.();
     });
 
     // Surface defaults
     document.getElementById('sel-surface-type').addEventListener('change', e => {
-      this.state.surfaceDraftType = e.target.value;
-      this._updateSurfaceSubOptions();
-      this.refreshDraftSectionSelectors();
+      this.setTool('surface', e.target.value);
     });
 
     // Sticky ("paste") draft section for new surfaces
     document.getElementById('sel-surface-section')?.addEventListener('change', e => {
       this.state.setDraftSectionName('surface', this.state.surfaceDraftType, e.target.value);
       this.refreshDraftSectionSelectors();
+      this.callbacks.onPropertyChange?.();
     });
     document.getElementById('sel-surface-mode').addEventListener('change', e => {
-      this.state.surfaceDraftMode = e.target.value;
+      this.setPlacement({ surfaceDraftMode: e.target.value });
     });
     document.getElementById('sel-load-direction').addEventListener('change', e => {
       this.state.surfaceDraftLoadDir = e.target.value;
@@ -208,7 +202,7 @@ export class UI {
 
     // Load type
     document.getElementById('sel-load-type').addEventListener('change', e => {
-      this.state.loadDraftType = e.target.value;
+      this.setPlacement({ loadDraftType: e.target.value });
     });
 
     // Load case for newly placed loads
@@ -216,30 +210,34 @@ export class UI {
       this.state.loadDraftCase = e.target.value;
     });
 
-    // Keyboard shortcuts for tools
+    // Buttons, native selectors and keyboard shortcuts share one transition.
     window.addEventListener('keydown', e => {
-      if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
-      if (e.key === 'v' || e.key === 'V') {
-        this.state.currentTool = 'select';
-      } else if (e.key === 'm' || e.key === 'M') {
-        this.state.currentTool = 'member';
-      } else if (e.key === 'f' || e.key === 'F') {
-        this.state.currentTool = 'surface';
-      } else if (e.key === 'l' || e.key === 'L') {
-        this.state.currentTool = 'load';
-      } else if (e.key === 's' || e.key === 'S') {
-        this.state.currentTool = 'support';
-      } else if (e.key === 'd' || e.key === 'D') {
-        this.state.currentTool = 'measure';
-      } else {
-        return;
-      }
-      this._updateToolUI();
-      this.callbacks.onToolChange?.(this.state.currentTool);
+      const tool = toolForKey(e);
+      if (!tool) return;
+      e.preventDefault();
+      this.setTool(tool);
     });
 
     // Initial tool options visibility
     this._updateToolOptions();
+  }
+
+  setTool(tool, type) {
+    const patch = { currentTool: tool };
+    if (type && tool === 'member') patch.memberDraftType = type;
+    if (type && tool === 'surface') patch.surfaceDraftType = type;
+    this.setPlacement(patch);
+  }
+
+  setPlacement(patch) {
+    // Cancel provisional edits BEFORE changing the tool/level; rollback can
+    // restore runtime state as well as geometry.
+    this.callbacks.onBeforePlacementChange?.();
+    Object.assign(this.state, patch);
+    this.refreshLevelSelectors();
+    this._updateToolUI();
+    if ('activeLevelId' in patch) this.callbacks.onLayerChange?.(this.state.activeLevelId);
+    else this.callbacks.onToolChange?.(this.state.currentTool);
   }
 
   _updateToolUI() {
@@ -380,6 +378,8 @@ export class UI {
     if (selSurfaceMode) selSurfaceMode.value = this.state.surfaceDraftMode;
     const selLoadDir = document.getElementById('sel-load-direction');
     if (selLoadDir) selLoadDir.value = this.state.surfaceDraftLoadDir;
+    const selLoadType = document.getElementById('sel-load-type');
+    if (selLoadType) selLoadType.value = this.state.loadDraftType;
     const selLoadCase = document.getElementById('sel-load-case');
     if (selLoadCase) selLoadCase.value = this.state.loadDraftCase || 'DL';
     const selPlanLayerMode = document.getElementById('sel-plan-layer-display-mode');
@@ -464,17 +464,17 @@ export class UI {
     }
   }
 
-  renderModelCheck() {
+  renderModelCheck({ reveal = true } = {}) {
     this._diagnosticSource = 'model';
-    renderDiagnostics(this, this.state.validateModel());
+    renderDiagnostics(this, this.state.validateModel(), '', { reveal });
   }
 
-  renderAnalysisPreflight(preflight) {
+  renderAnalysisPreflight(preflight, { reveal = true } = {}) {
     this._diagnosticSource = 'preflight';
     this._diagnosticPreflight = preflight;
     const summary = preflight.summary;
     renderDiagnostics(this, preflight.issues, '<p class="quantity-note">' +
-      escapeHtml(t('analysisPreflightSummary', summary)) + '</p>');
+      escapeHtml(t('analysisPreflightSummary', summary)) + '</p>', { reveal });
   }
 
   setDiagnosticFilters(filters = {}) {
@@ -832,8 +832,8 @@ export class UI {
     this.updateStatusBar();
     this.refreshQuantitySummary({ force: true });
     this.updatePropertyPanel();
-    if (this._diagnosticSource === 'model') this.renderModelCheck();
-    else if (this._diagnosticSource === 'preflight') this.renderAnalysisPreflight(this._diagnosticPreflight);
+    if (this._diagnosticSource === 'model') this.renderModelCheck({ reveal: false });
+    else if (this._diagnosticSource === 'preflight') this.renderAnalysisPreflight(this._diagnosticPreflight, { reveal: false });
   }
 }
 

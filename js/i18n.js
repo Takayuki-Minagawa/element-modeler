@@ -2,6 +2,11 @@
 
 const dict = {
   ja: {
+    displaySettingsOpen: '表示設定…',
+    displayCommon: '共通',
+    displayPlan: '平面',
+    display3d: '3D',
+    placementHidden: '入力対象が非表示になっています。',
     menuFile: 'ファイル',
     menuEdit: '編集',
     menuModel: 'モデル',
@@ -24,7 +29,7 @@ const dict = {
     inputElement: '作成する部材',
     inputMode: '操作モード',
     inputConditions: '配置条件',
-    inputAids: 'スナップ・入力補助',
+    inputAids: '入力補助',
     inputNavigation: 'ホイールで拡大・縮小 / 右ドラッグで移動',
     manage: '管理',
     inspectorChecks: 'チェック',
@@ -572,6 +577,11 @@ const dict = {
   },
 
   en: {
+    displaySettingsOpen: 'Display settings…',
+    displayCommon: 'Common',
+    displayPlan: 'Plan',
+    display3d: '3D',
+    placementHidden: 'The element you are drawing is hidden by a display filter.',
     menuFile: 'File',
     menuEdit: 'Edit',
     menuModel: 'Model',
@@ -594,7 +604,7 @@ const dict = {
     inputElement: 'Choose an element',
     inputMode: 'Tool mode',
     inputConditions: 'Placement settings',
-    inputAids: 'Snap and input aids',
+    inputAids: 'Input aids',
     inputNavigation: 'Scroll to zoom / Right-drag to pan',
     manage: 'Manage',
     inspectorChecks: 'Checks',
@@ -624,7 +634,7 @@ const dict = {
     activeLayer: 'Layer',
     draftMemberType: 'Line Type',
     draftSurfaceType: 'Surface Type',
-    draftSection: 'Section (paste)',
+    draftSection: 'Section',
     applyAsDraft: 'Paste this section',
     applyAsDraftHint: 'Reuse this section for subsequent placements',
     surfaceMode: 'Shape',
@@ -709,7 +719,7 @@ const dict = {
     exteriorWallConfirmReplace: 'An exterior wall line already exists on this layer. Delete it and start new input?',
 
     // Tabs
-    tab2d: '平面入力',
+    tab2d: 'Plan Input',
     tab3d: '3D View',
 
     // Status bar

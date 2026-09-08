@@ -1,3 +1,4 @@
+import { blocksCadShortcut } from './keyboard.js';
 import { executeModelCommand } from './commands/model-command.js';
 import { finishDrag } from './tools/drag-edit.js';
 import { selectionTool } from './tools/selection.js';
@@ -323,11 +324,8 @@ export class ToolManager {
   }
 
   _onKeyDown(e) {
-    const targetTag = e.target?.tagName;
-    const isEditableTarget = targetTag === 'INPUT' || targetTag === 'SELECT' ||
-      targetTag === 'TEXTAREA' || e.target?.isContentEditable;
-
-    if (e.code === 'Space' && !isEditableTarget) {
+    if (blocksCadShortcut(e)) return;
+    if (e.code === 'Space') {
       this._spaceDown = true;
       e.preventDefault();
     }
@@ -357,27 +355,26 @@ export class ToolManager {
       }
     }
 
-    // Delete (skip when focused on input/select)
-    if ((e.key === 'Delete' || e.key === 'Backspace') && !isEditableTarget) {
+    // Delete
+    if (e.key === 'Delete' || e.key === 'Backspace') {
       this.deleteSelection();
     }
 
     // Undo/Redo
-    if ((e.ctrlKey || e.metaKey) && !isEditableTarget) {
-      if (e.key === 'z' && !e.shiftKey) {
+    if (e.ctrlKey || e.metaKey) {
+      const key = e.key.toLowerCase();
+      if (key === 'z' && !e.shiftKey) {
         e.preventDefault();
-        this.cancelDrag();
-        if (this.history.undo()) this.onUpdate();
-      } else if (e.key === 'y' || (e.key === 'z' && e.shiftKey)) {
+        this.restoreHistory('undo');
+      } else if (key === 'y' || (key === 'z' && e.shiftKey)) {
         e.preventDefault();
-        this.cancelDrag();
-        if (this.history.redo()) this.onUpdate();
+        this.restoreHistory('redo');
       }
     }
 
     // Close polyline surface
-    if (!isEditableTarget && this.state.currentTool === 'surface' &&
-        this.state.surfaceDraftMode === 'polyline' &&
+    if (this.state.currentTool === 'surface' &&
+        this._getEffectiveSurfaceMode() === 'polyline' &&
         (e.key === 'Enter' || e.key === 'Return')) {
       this._finishSurfacePolyline();
     }
@@ -394,6 +391,14 @@ export class ToolManager {
     this._measureStart = null;
     this.canvas2d.preview = null;
     this.canvas2d.measure = null;
+  }
+
+  restoreHistory(direction) {
+    if (direction !== 'undo' && direction !== 'redo') return false;
+    this.cancelPlacement();
+    const changed = this.history[direction]();
+    this.onUpdate();
+    return changed;
   }
 
   deleteSelection() {
