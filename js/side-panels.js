@@ -8,9 +8,9 @@ function buildSidePanelConfig() {
       widthVar: '--toolbar-w',
       storageWidth: 'lineframe-toolbar-width',
       storageCollapsed: 'lineframe-toolbar-collapsed',
-      min: 112,
+      min: 208,
       maxRatio: 0.36,
-      defaultWidth: 160,
+      defaultWidth: 244,
       button: document.getElementById('btn-toggle-toolbar'),
       resizer: document.getElementById('toolbar-resizer'),
       className: 'toolbar-collapsed',
@@ -25,9 +25,9 @@ function buildSidePanelConfig() {
       widthVar: '--panel-w',
       storageWidth: 'lineframe-property-panel-width',
       storageCollapsed: 'lineframe-property-panel-collapsed',
-      min: 156,
+      min: 220,
       maxRatio: 0.42,
-      defaultWidth: 220,
+      defaultWidth: 284,
       button: document.getElementById('btn-toggle-property'),
       resizer: document.getElementById('property-resizer'),
       className: 'property-collapsed',
@@ -78,10 +78,10 @@ export function initSidePanels({ onLayoutRefresh } = {}) {
     cfg.button.title = collapsed ? cfg.showTitle : cfg.hideTitle;
   }
 
-  function setPanelCollapsed(side, collapsed) {
+  function setPanelCollapsed(side, collapsed, persist = true) {
     const cfg = sidePanelConfig[side];
     document.body.classList.toggle(cfg.className, collapsed);
-    localStorage.setItem(cfg.storageCollapsed, collapsed ? '1' : '0');
+    if (persist) localStorage.setItem(cfg.storageCollapsed, collapsed ? '1' : '0');
     updatePanelToggle(side);
     requestLayoutRefresh();
   }
@@ -98,7 +98,10 @@ export function initSidePanels({ onLayoutRefresh } = {}) {
   for (const side of Object.keys(sidePanelConfig)) {
     const cfg = sidePanelConfig[side];
     applyPanelWidth(side, getStoredPanelWidth(cfg), false);
-    setPanelCollapsed(side, localStorage.getItem(cfg.storageCollapsed) === '1');
+    const savedCollapsed = localStorage.getItem(cfg.storageCollapsed);
+    setPanelCollapsed(side, savedCollapsed === null
+      ? side === 'property' && window.innerWidth <= 1000
+      : savedCollapsed === '1', false);
 
     cfg.button?.addEventListener('click', () => {
       setPanelCollapsed(side, !isPanelCollapsed(side));
@@ -131,4 +134,13 @@ export function initSidePanels({ onLayoutRefresh } = {}) {
       window.addEventListener('pointercancel', finishResize, { once: true });
     });
   }
+  window.addEventListener('resize', () => {
+    for (const [side, cfg] of Object.entries(sidePanelConfig)) {
+      applyPanelWidth(side, getStoredPanelWidth(cfg), false);
+      if (localStorage.getItem(cfg.storageCollapsed) === null) {
+        setPanelCollapsed(side, side === 'property' && window.innerWidth <= 1000, false);
+      }
+    }
+  });
+
 }

@@ -58,6 +58,7 @@ async function selectMember(page, id = 'M1') {
 async function modelJSON(page) { return page.evaluate(() => window._app.state.toJSON()); }
 async function exportModel(page) {
   const downloadPromise = page.waitForEvent('download');
+  await page.locator('#menu-file-trigger').click();
   await page.locator('#btn-export').click();
   const download = await downloadPromise;
   expect(download.suggestedFilename()).toMatch(/\.json$/);
@@ -264,6 +265,7 @@ test('model diagnostic filters and target button navigate to the offending membe
   state.members[1].levelId = 'L1';
   const model = state.toJSON();
   await importModel(page, model);
+  await page.locator('#menu-model-trigger').click();
   await page.locator('#btn-model-check').click();
   await expect(page.locator('#model-check-content [data-diagnostic-target]')).not.toHaveCount(0);
   await page.locator('#diagnostic-severity').selectOption('warning');
@@ -289,6 +291,7 @@ for (const kind of ['lineLoad', 'areaLoad']) {
     state.addLoad(kind, { x1: 0, y1: 0, x2: 5000, y2: kind === 'lineLoad' ? 0 : 4000, value: 1000, loadCase: 'DL' });
     const model = state.toJSON();
     await importModel(page, model);
+    await page.locator('#menu-analysis-trigger').click();
     await page.locator('#btn-analysis-workbench').click();
     const dialog = page.locator('dialog.analysis-workbench');
     await expect(dialog).toBeVisible();
@@ -341,6 +344,7 @@ test('analysis results import, deformation scale, projection, target navigation 
     elements: analysis.elements.map(element => ({ id: element.id, sourceId: element.sourceId, sourceBranch: element.sourceBranch, nodeI: element.nodeI, nodeJ: element.nodeJ, localEndForces: Array(12).fill(0) })),
   };
   await importModel(page, model);
+  await page.locator('#menu-analysis-trigger').click();
   await page.locator('#btn-analysis-workbench').click();
   const dialog = page.locator('dialog.analysis-workbench');
   const uploadResult = value => page.locator('#analysis-result-file').setInputFiles({ name: 'result.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(value)) });
@@ -468,6 +472,7 @@ test('3D geometry edits refresh clipping range and PNG exports current hidden 2D
   await expect(page.locator('#canvas-2d')).toBeHidden();
   const hidden = await canvasPixels(page);
   const pending = page.waitForEvent('download');
+  await page.locator('#menu-file-trigger').click();
   await page.locator('#btn-png-export').click();
   const download = await pending;
   expect(download.suggestedFilename()).toMatch(/\.png$/);

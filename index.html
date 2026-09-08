@@ -6,37 +6,199 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
-  <title>Element Modeler - Ver.1.2.0</title>
+  <title>Element Modeler - Ver.1.3.0</title>
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
-  <link rel="stylesheet" href="style.css?v=1.2.0">
+  <link rel="stylesheet" href="style.css?v=1.3.0">
 </head>
 <body>
-  <!-- Left Toolbar -->
-  <aside id="toolbar">
-    <div id="toolbar-quick" class="toolbar-sticky-top">
-      <h2 data-i18n="tools">ツール</h2>
-      <button id="btn-settings">&#9881; <span data-i18n="settings">設定</span></button>
-      <span class="layer-label" data-i18n="activeLayer">レイヤー</span>
-      <div class="layer-controls">
-        <select id="sel-active-layer"></select>
-        <button id="btn-layer-manage" class="layer-manage-btn" title="Layer Management">&#9881;</button>
-      </div>
-      <span class="layer-label" data-i18n="toolLabel">要素</span>
-      <div class="layer-controls">
-        <select id="sel-tool">
+<header id="app-header">
+<div class="app-brand"><img src="favicon.svg" alt="" width="24" height="24"><span>Element Modeler</span></div>
+<nav id="app-menubar" aria-label="メインメニュー"><div class="menu-group"><button type="button" id="menu-file-trigger" class="menu-trigger" aria-expanded="false" aria-controls="menu-file" data-i18n="menuFile">ファイル</button><div id="menu-file" class="menu-dropdown" role="group" aria-labelledby="menu-file-trigger" hidden>
+<p class="menu-section" data-i18n="menuCadFile">CADデータ</p>
+<button type="button" id="btn-export"><span data-i18n="export">CAD保存</span></button>
+<button type="button" id="btn-import-trigger"><span data-i18n="import">CAD読込</span></button>
+<button type="button" data-recovery-open data-i18n="menuRecovery">復元履歴…</button>
+<p class="menu-section" data-i18n="menuDrawingFiles">図面・下絵</p>
+<button type="button" id="btn-dxf-export"><span data-i18n="dxfExport">図面DXF出力</span></button>
+<button type="button" id="btn-png-export"><span data-i18n="pngExport">PNG出力</span></button>
+<button type="button" id="btn-underlay-import"><span data-i18n="underlayImport">下絵DXF読込</span></button>
+<button type="button" id="btn-underlay-clear"><span data-i18n="underlayClear">下絵クリア</span></button>
+<p class="menu-section" data-i18n="quantitySummary">集計</p>
+<button type="button" id="btn-quantity-export" data-i18n="quantityCsvExport">CSV出力</button>
+<button type="button" id="btn-quantity-detail-export" data-i18n="quantityDetailCsvExport">詳細CSV出力</button>
+</div></div>
+<div class="menu-group"><button type="button" id="menu-edit-trigger" class="menu-trigger" aria-expanded="false" aria-controls="menu-edit" data-i18n="menuEdit">編集</button><div id="menu-edit" class="menu-dropdown" role="group" aria-labelledby="menu-edit-trigger" hidden>
+<button type="button" data-history="undo"><span data-i18n="menuUndo">元に戻す</span><kbd>Ctrl+Z</kbd></button>
+<button type="button" data-history="redo"><span data-i18n="menuRedo">やり直す</span><kbd>Ctrl+Y</kbd></button>
+<button type="button" id="btn-delete-selection" data-i18n="menuDelete">選択要素を削除</button>
+<p class="menu-section" data-i18n="menuConnections">部材の接続</p>
+<button type="button" id="btn-merge-nodes" data-i18n="mergeNodes">節点マージ</button>
+<button type="button" id="btn-split-members" data-i18n="splitMembers">交差部材を分割</button>
+</div></div>
+<div class="menu-group"><button type="button" id="menu-model-trigger" class="menu-trigger" aria-expanded="false" aria-controls="menu-model" data-i18n="menuModel">モデル</button><div id="menu-model" class="menu-dropdown" role="group" aria-labelledby="menu-model-trigger" hidden>
+<p class="menu-section" data-i18n="menuModelSetup">モデルの準備</p>
+<button type="button" id="btn-grid-frame"><span data-i18n="gridFrameOpen">初期モデル生成…</span></button>
+<button type="button" id="btn-layer-manage"><span data-i18n="layerManage">レイヤー管理</span></button>
+<button type="button" id="btn-axes-manage"><span data-i18n="axesManage">通り芯管理</span></button>
+<button type="button" id="btn-open-user-def"><span data-i18n="userDefManage">ユーザー定義</span></button>
+<button type="button" id="btn-copy-level-open" data-i18n="copyLevelTitle">階コピー</button>
+<p class="menu-section" data-i18n="menuModelReview">モデルの確認</p>
+<button type="button" id="btn-model-check" data-i18n="modelCheck">モデルチェック</button>
+<button type="button" data-inspector-open="quantities" data-i18n="quantitySummary">集計</button>
+</div></div>
+<div class="menu-group"><button type="button" id="menu-view-trigger" class="menu-trigger" aria-expanded="false" aria-controls="menu-view" data-i18n="menuView">表示</button><div id="menu-view" class="menu-dropdown" role="group" aria-labelledby="menu-view-trigger" hidden>
+
+<button type="button" data-trigger="tab-2d" data-i18n="tab2d">平面入力</button>
+<button type="button" data-trigger="tab-3d" data-i18n="tab3d">3D 表示</button>
+<button type="button" data-trigger="btn-elevation-open" data-i18n="elevationOpen">軸組図</button>
+<button type="button" data-trigger="btn-toggle-toolbar" data-i18n="menuToggleInput">入力パネルの表示切替</button>
+<button type="button" data-trigger="btn-toggle-property" data-i18n="menuToggleInspector">確認パネルの表示切替</button>
+<hr><p class="menu-section" data-i18n="menuDisplaySettings">表示設定</p>    <label class="toggle-label">
+      <input type="checkbox" id="chk-show-supports" checked>
+      <span data-i18n="showSupports">支点表示</span>
+    </label>
+
+    <label class="toggle-label">
+      <input type="checkbox" id="chk-show-axes" checked>
+      <span data-i18n="showAxes">通り芯表示</span>
+    </label>
+    <label class="toggle-label">
+      <input type="checkbox" id="chk-show-underlay" checked>
+      <span data-i18n="showUnderlay">下絵表示</span>
+    </label>
+    <label class="grid-label">
+      <span data-i18n="displayPreset">表示プリセット</span>
+      <select id="sel-display-preset">
+        <option value="input" data-i18n="displayPresetInput">入力用</option>
+        <option value="review" data-i18n="displayPresetReview">確認用</option>
+        <option value="presentation" data-i18n="displayPresetPresentation">3D確認用</option>
+      </select>
+    </label>
+    <label class="grid-label">
+      <span data-i18n="planLayerDisplayMode">2Dレイヤー表示</span>
+      <select id="sel-plan-layer-display-mode">
+        <option value="all" data-i18n="planLayerAll">全レイヤー</option>
+        <option value="current" data-i18n="planLayerCurrent">現在のみ</option>
+        <option value="halftone" data-i18n="planLayerHalftone">他レイヤー薄表示</option>
+      </select>
+    </label>
+    <label class="toggle-label">
+      <input type="checkbox" id="chk-plan-layer-selection-lock">
+      <span data-i18n="planLayerSelectionLock">他レイヤー選択ロック</span>
+    </label>
+    <label class="grid-label">
+      <span data-i18n="view3dLayerDisplayMode">3Dレイヤー表示</span>
+      <select id="sel-3d-layer-display-mode">
+        <option value="all" data-i18n="planLayerAll">全レイヤー</option>
+        <option value="current" data-i18n="planLayerCurrent">現在のみ</option>
+        <option value="halftone" data-i18n="planLayerHalftone">他レイヤー薄表示</option>
+      </select>
+    </label>
+    <label class="grid-label">
+      <span data-i18n="member3dRenderMode">3D線材表示</span>
+      <select id="sel-member-3d-render-mode">
+        <option value="solid" data-i18n="member3dSolid">断面形状</option>
+        <option value="line" data-i18n="member3dLine">線表示</option>
+      </select>
+    </label>
+    <label class="grid-label">
+      <span data-i18n="beam3dSectionMode">梁3D断面</span>
+      <select id="sel-beam-3d-section-mode">
+        <option value="box" data-i18n="beam3dBox">ボックス</option>
+        <option value="hStrong" data-i18n="beam3dHStrong">H形鋼（強軸）</option>
+        <option value="hWeak" data-i18n="beam3dHWeak">H形鋼（弱軸）</option>
+      </select>
+    </label>
+    <div class="tool-filter-group">
+      <span class="layer-label" data-i18n="displayFilters">表示フィルタ</span>
+      <label class="toggle-label compact-toggle">
+        <input type="checkbox" id="chk-show-members" checked>
+        <span data-i18n="member">線材</span>
+      </label>
+      <label class="toggle-label compact-toggle">
+        <input type="checkbox" id="chk-show-surfaces" checked>
+        <span data-i18n="surface">面材</span>
+      </label>
+      <label class="toggle-label compact-toggle">
+        <input type="checkbox" id="chk-show-loads" checked>
+        <span data-i18n="load">荷重</span>
+      </label>
+      <label class="toggle-label compact-toggle">
+        <input type="checkbox" id="chk-show-member-end-symbols">
+        <span data-i18n="showMemberEndSymbols">材端記号</span>
+      </label>
+      <label class="toggle-label compact-toggle">
+        <input type="checkbox" id="chk-show-placement-labels" checked>
+        <span data-i18n="showPlacementLabels">配置ラベル</span>
+      </label>
+    </div>
+    <label class="grid-label">
+      <span data-i18n="memberTypeFilter">線材種別フィルタ</span>
+      <select id="sel-member-type-filter">
+        <option value="all" data-i18n="filterAll">すべて</option>
+        <option value="beam" data-i18n="beam">梁</option>
+        <option value="column" data-i18n="column">柱</option>
+        <option value="hbrace" data-i18n="hbrace">水平ブレース</option>
+        <option value="vbrace" data-i18n="vbrace">垂直ブレース</option>
+      </select>
+    </label>
+    <label class="grid-label">
+      <span data-i18n="sectionFilter">断面フィルタ</span>
+      <select id="sel-section-filter">
+        <option value="all" data-i18n="filterAll">すべて</option>
+      </select>
+    </label>
+
+</div></div>
+<div class="menu-group"><button type="button" id="menu-analysis-trigger" class="menu-trigger" aria-expanded="false" aria-controls="menu-analysis" data-i18n="menuAnalysis">解析</button><div id="menu-analysis" class="menu-dropdown" role="group" aria-labelledby="menu-analysis-trigger" hidden>
+<button type="button" id="btn-open-combos"><span data-i18n="comboManage">荷重組合せ</span></button>
+<button type="button" id="btn-analysis-settings"><span data-i18n="analysisSettingsOpen">解析出力設定</span></button>
+<button type="button" id="btn-analysis-export"><span data-i18n="analysisExport">解析JSON出力</span></button>
+<button type="button" id="btn-analysis-csv-export"><span data-i18n="analysisCsvExport">解析CSV出力</span></button>
+<div id="analysis-tools" class="extension-tools"></div>
+</div></div>
+<div class="menu-group"><button type="button" id="menu-help-trigger" class="menu-trigger" aria-expanded="false" aria-controls="menu-help" data-i18n="help">ヘルプ</button><div id="menu-help" class="menu-dropdown" role="group" aria-labelledby="menu-help-trigger" hidden>
+<button type="button" id="btn-open-help"><span data-i18n="help">ヘルプ</span></button>
+<p class="menu-section" data-i18n="sampleModels">サンプルモデル</p>
+<button type="button" id="btn-sample-gable"><span data-i18n="sampleGable">平屋+切妻屋根</span></button>
+<button type="button" id="btn-sample-frame"><span data-i18n="sampleFrame">2階建フレーム</span></button>
+</div></div>
+</nav>
+<div class="header-actions"><button type="button" data-trigger="btn-export" class="header-save" data-i18n="export">CAD保存</button><button type="button" id="btn-settings">&#9881; <span data-i18n="settings">設定</span></button></div>
+</header>
+  <!-- Plan input -->
+<aside id="toolbar">
+<div class="input-heading"><h2 data-i18n="planInput">平面から部材を作成</h2><span class="unit-badge">mm</span></div>
+<section id="toolbar-quick">
+<label for="sel-active-layer" class="step-label"><span class="step-number">1</span><span data-i18n="inputLevel">入力する階</span></label>
+<div class="layer-controls"><select id="sel-active-layer"></select><button type="button" class="layer-manage-btn" data-trigger="btn-layer-manage" data-i18n="manage">管理</button></div>
+</section>
+<section class="input-section">
+<h3 class="step-label"><span class="step-number">2</span><span data-i18n="inputElement">作成する部材</span></h3>
+<div class="draw-tool-grid"><button type="button" class="draw-tool" data-draw-tool="select" data-draw-type="" aria-pressed="false"><span class="draw-icon" aria-hidden="true">↖</span><span data-i18n="selectTool">選択</span></button>
+<button type="button" class="draw-tool" data-draw-tool="member" data-draw-type="beam" aria-pressed="false"><span class="draw-icon" aria-hidden="true">━</span><span data-i18n="beam">梁</span></button>
+<button type="button" class="draw-tool" data-draw-tool="member" data-draw-type="column" aria-pressed="false"><span class="draw-icon" aria-hidden="true">▣</span><span data-i18n="column">柱</span></button>
+<button type="button" class="draw-tool" data-draw-tool="member" data-draw-type="hbrace" aria-pressed="false"><span class="draw-icon" aria-hidden="true">╱</span><span data-i18n="hbrace">水平ブレース</span></button>
+<button type="button" class="draw-tool" data-draw-tool="member" data-draw-type="vbrace" aria-pressed="false"><span class="draw-icon" aria-hidden="true">╳</span><span data-i18n="vbrace">鉛直ブレース</span></button>
+<button type="button" class="draw-tool" data-draw-tool="surface" data-draw-type="floor" aria-pressed="false"><span class="draw-icon" aria-hidden="true">▱</span><span data-i18n="floor">床</span></button>
+<button type="button" class="draw-tool" data-draw-tool="surface" data-draw-type="wall" aria-pressed="false"><span class="draw-icon" aria-hidden="true">▥</span><span data-i18n="wall">壁</span></button>
+<button type="button" class="draw-tool" data-draw-tool="surface" data-draw-type="roof" aria-pressed="false"><span class="draw-icon" aria-hidden="true">⌂</span><span data-i18n="roof">屋根</span></button></div>
+<label class="grid-label tool-mode"><span data-i18n="inputMode">操作モード</span><select id="sel-tool">
           <option value="select" data-i18n="selectTool">選択</option>
           <option value="member" data-i18n="member">線材</option>
           <option value="surface" data-i18n="surface">面材</option>
           <option value="load" data-i18n="load">荷重</option>
           <option value="support" data-i18n="support">支点</option>
           <option value="measure" data-i18n="measureTool">計測</option>
-        </select>
-      </div>
-      <div class="layer-controls">
-        <button id="btn-axes-manage" title="Grid axes">&#9881; <span data-i18n="axesManage">通り芯管理</span></button>
-      </div>
-      <hr>
-    </div>
+        </select></label>
+<div class="secondary-tools">
+<button type="button" data-draw-tool="load" aria-pressed="false" data-i18n="load">荷重</button>
+<button type="button" data-draw-tool="support" aria-pressed="false" data-i18n="support">支点</button>
+<button type="button" data-draw-tool="measure" aria-pressed="false" data-i18n="measureTool">計測</button>
+</div>
+</section>
+<section class="input-section" id="placement-section">
+<h3 class="step-label"><span class="step-number">3</span><span data-i18n="inputConditions">配置条件</span></h3>
     <div id="tool-opts-member" class="tool-opts">
       <label class="grid-label">
         <span data-i18n="draftMemberType">線材種別</span>
@@ -148,144 +310,19 @@
         </select>
       </label>
     </div>
-    <hr>
-    <label class="toggle-label">
-      <input type="checkbox" id="chk-snap" checked>
-      <span data-i18n="snap">スナップ</span>
-    </label>
-    <label class="toggle-label">
-      <input type="checkbox" id="chk-show-supports" checked>
-      <span data-i18n="showSupports">支点表示</span>
-    </label>
+
+<p id="placement-guide" class="placement-guide" aria-live="polite"></p>
+</section>
+<details class="input-aids"><summary data-i18n="inputAids">スナップ・入力補助</summary>
+<label class="toggle-label"><input type="checkbox" id="chk-snap" checked><span data-i18n="snap">スナップ</span></label>
+<label class="grid-label"><span data-i18n="grid">グリッド (mm)</span><input type="number" id="sel-grid" min="100" max="1000" step="1" value="1000"></label>
     <label class="toggle-label">
       <input type="checkbox" id="chk-wide-pick">
       <span data-i18n="widePick">広域選択</span>
     </label>
-    <label class="toggle-label">
-      <input type="checkbox" id="chk-show-axes" checked>
-      <span data-i18n="showAxes">通り芯表示</span>
-    </label>
-    <label class="toggle-label">
-      <input type="checkbox" id="chk-show-underlay" checked>
-      <span data-i18n="showUnderlay">下絵表示</span>
-    </label>
-    <label class="grid-label">
-      <span data-i18n="displayPreset">表示プリセット</span>
-      <select id="sel-display-preset">
-        <option value="input" data-i18n="displayPresetInput">入力用</option>
-        <option value="review" data-i18n="displayPresetReview">確認用</option>
-        <option value="presentation" data-i18n="displayPresetPresentation">3D確認用</option>
-      </select>
-    </label>
-    <label class="grid-label">
-      <span data-i18n="planLayerDisplayMode">2Dレイヤー表示</span>
-      <select id="sel-plan-layer-display-mode">
-        <option value="all" data-i18n="planLayerAll">全レイヤー</option>
-        <option value="current" data-i18n="planLayerCurrent">現在のみ</option>
-        <option value="halftone" data-i18n="planLayerHalftone">他レイヤー薄表示</option>
-      </select>
-    </label>
-    <label class="toggle-label">
-      <input type="checkbox" id="chk-plan-layer-selection-lock">
-      <span data-i18n="planLayerSelectionLock">他レイヤー選択ロック</span>
-    </label>
-    <label class="grid-label">
-      <span data-i18n="view3dLayerDisplayMode">3Dレイヤー表示</span>
-      <select id="sel-3d-layer-display-mode">
-        <option value="all" data-i18n="planLayerAll">全レイヤー</option>
-        <option value="current" data-i18n="planLayerCurrent">現在のみ</option>
-        <option value="halftone" data-i18n="planLayerHalftone">他レイヤー薄表示</option>
-      </select>
-    </label>
-    <label class="grid-label">
-      <span data-i18n="member3dRenderMode">3D線材表示</span>
-      <select id="sel-member-3d-render-mode">
-        <option value="solid" data-i18n="member3dSolid">断面形状</option>
-        <option value="line" data-i18n="member3dLine">線表示</option>
-      </select>
-    </label>
-    <label class="grid-label">
-      <span data-i18n="beam3dSectionMode">梁3D断面</span>
-      <select id="sel-beam-3d-section-mode">
-        <option value="box" data-i18n="beam3dBox">ボックス</option>
-        <option value="hStrong" data-i18n="beam3dHStrong">H形鋼（強軸）</option>
-        <option value="hWeak" data-i18n="beam3dHWeak">H形鋼（弱軸）</option>
-      </select>
-    </label>
-    <div class="tool-filter-group">
-      <span class="layer-label" data-i18n="displayFilters">表示フィルタ</span>
-      <label class="toggle-label compact-toggle">
-        <input type="checkbox" id="chk-show-members" checked>
-        <span data-i18n="member">線材</span>
-      </label>
-      <label class="toggle-label compact-toggle">
-        <input type="checkbox" id="chk-show-surfaces" checked>
-        <span data-i18n="surface">面材</span>
-      </label>
-      <label class="toggle-label compact-toggle">
-        <input type="checkbox" id="chk-show-loads" checked>
-        <span data-i18n="load">荷重</span>
-      </label>
-      <label class="toggle-label compact-toggle">
-        <input type="checkbox" id="chk-show-member-end-symbols">
-        <span data-i18n="showMemberEndSymbols">材端記号</span>
-      </label>
-      <label class="toggle-label compact-toggle">
-        <input type="checkbox" id="chk-show-placement-labels" checked>
-        <span data-i18n="showPlacementLabels">配置ラベル</span>
-      </label>
-    </div>
-    <label class="grid-label">
-      <span data-i18n="memberTypeFilter">線材種別フィルタ</span>
-      <select id="sel-member-type-filter">
-        <option value="all" data-i18n="filterAll">すべて</option>
-        <option value="beam" data-i18n="beam">梁</option>
-        <option value="column" data-i18n="column">柱</option>
-        <option value="hbrace" data-i18n="hbrace">水平ブレース</option>
-        <option value="vbrace" data-i18n="vbrace">垂直ブレース</option>
-      </select>
-    </label>
-    <label class="grid-label">
-      <span data-i18n="sectionFilter">断面フィルタ</span>
-      <select id="sel-section-filter">
-        <option value="all" data-i18n="filterAll">すべて</option>
-      </select>
-    </label>
-    <label class="grid-label">
-      <span data-i18n="grid">グリッド (mm)</span>
-      <input type="number" id="sel-grid" min="100" max="1000" step="1" value="1000">
-    </label>
-    <hr>
-    <div class="tool-filter-group">
-      <span class="layer-label" data-i18n="copyLevelTitle">階コピー</span>
-      <label class="grid-label">
-        <span data-i18n="copyLevelSource">コピー元</span>
-        <select id="sel-copy-source-layer"></select>
-      </label>
-      <label class="grid-label">
-        <span data-i18n="copyLevelTarget">コピー先</span>
-        <select id="sel-copy-target-layer"></select>
-      </label>
-      <button id="btn-copy-level" title="Copy level elements"><span data-i18n="copyLevelAction">階をコピー</span></button>
-    </div>
-    <hr>
-    <button id="btn-export" title="Save CAD data">&#128190; <span data-i18n="export">CAD保存</span></button>
-    <button id="btn-import-trigger" title="Load CAD data">&#128194; <span data-i18n="import">CAD読込</span></button>
-    <input type="file" id="file-import" accept=".json" hidden>
-    <div id="recovery-tools" class="extension-tools"></div>
-    <div id="viewer-tools" class="extension-tools" hidden></div>
-    <div id="analysis-tools" class="extension-tools"></div>
-    <hr>
-    <button id="btn-analysis-settings" title="Configure analysis export">&#9881; <span data-i18n="analysisSettingsOpen">解析出力設定</span></button>
-    <button id="btn-analysis-export" title="Export analysis model (JSON)">&#128640; <span data-i18n="analysisExport">解析JSON出力</span></button>
-    <button id="btn-analysis-csv-export" title="Export analysis model (CSV)">&#128640; <span data-i18n="analysisCsvExport">解析CSV出力</span></button>
-    <button id="btn-dxf-export" title="Export plan DXF">&#128196; <span data-i18n="dxfExport">図面DXF出力</span></button>
-    <button id="btn-png-export" title="Export plan PNG">&#128247; <span data-i18n="pngExport">PNG出力</span></button>
-    <hr>
-    <button id="btn-underlay-import" title="Import DXF underlay">&#128209; <span data-i18n="underlayImport">下絵DXF読込</span></button>
-    <button id="btn-underlay-clear" title="Clear underlay">&#128465; <span data-i18n="underlayClear">下絵クリア</span></button>
-    <input type="file" id="file-underlay-import" accept=".dxf" hidden>
-  </aside>
+</details>
+<div class="input-footer"><p data-i18n="inputNavigation">ホイールで拡大・縮小 / 右ドラッグで移動</p><button type="button" data-trigger="btn-grid-frame" data-i18n="gridFrameOpen">初期モデル生成…</button></div>
+</aside>
   <div id="toolbar-resizer" class="side-resizer side-resizer-left" role="separator" aria-label="Resize toolbar" aria-orientation="vertical">
     <button id="btn-toggle-toolbar" class="panel-toggle-btn" type="button" aria-label="Hide toolbar" title="ツールパネルを隠す">‹</button>
   </div>
@@ -299,10 +336,12 @@
       <button id="btn-elevation-open" class="tab-btn" data-i18n="elevationOpen">軸組図</button>
     </nav>
 
+    <div id="workspace-context"><span id="context-level"></span><span id="context-tool"></span><div class="history-actions"><button type="button" data-history="undo" data-i18n="menuUndo">元に戻す</button><button type="button" data-history="redo" data-i18n="menuRedo">やり直す</button></div></div>
     <!-- Canvas Container -->
     <div id="canvas-container">
-      <canvas id="canvas-2d"></canvas>
+      <canvas id="canvas-2d" tabindex="0" aria-label="平面入力キャンバス"></canvas>
       <div id="viewer-3d" hidden></div>
+      <div id="viewer-tools" class="extension-tools viewer-overlay" hidden></div>
     </div>
 
     <!-- Status Bar -->
@@ -311,29 +350,46 @@
       <span id="status-snap" data-i18n="snapOn">スナップ: ON</span>
       <span id="status-zoom">Zoom: 100%</span>
       <span id="status-tool" data-i18n="toolMember">ツール: 線材</span>
-      <span id="status-version">Ver.1.2.0</span>
+      <div id="recovery-tools"></div>
+      <span id="status-version">Ver.1.3.0</span>
     </footer>
   </main>
   <div id="property-resizer" class="side-resizer side-resizer-right" role="separator" aria-label="Resize properties" aria-orientation="vertical">
     <button id="btn-toggle-property" class="panel-toggle-btn" type="button" aria-label="Hide properties" title="プロパティパネルを隠す">›</button>
   </div>
 
-  <!-- Right Property Panel -->
-  <aside id="property-panel">
-    <h2 data-i18n="properties">プロパティ</h2>
-    <div id="prop-content">
-      <p class="prop-placeholder" data-i18n="noSelection">未選択</p>
-    </div>
-    <h2 data-i18n="quantitySummary">集計</h2>
-    <button id="btn-model-check" class="support-preset-btn" data-i18n="modelCheck">モデルチェック</button>
-    <button id="btn-merge-nodes" class="support-preset-btn" data-i18n="mergeNodes">節点マージ</button>
-    <button id="btn-split-members" class="support-preset-btn" data-i18n="splitMembers">交差部材を分割</button>
-    <div id="model-check-content"></div>
-    <button id="btn-quantity-export" class="support-preset-btn" data-i18n="quantityCsvExport">CSV出力</button>
-    <button id="btn-quantity-detail-export" class="support-preset-btn" data-i18n="quantityDetailCsvExport">詳細CSV出力</button>
-    <div id="quantity-content"></div>
-  </aside>
+<aside id="property-panel">
+<div class="inspector-tabs" role="tablist" aria-label="モデル情報">
+<button type="button" id="inspector-properties-tab" role="tab" aria-selected="true" aria-controls="inspector-properties" data-inspector-tab="properties" data-i18n="properties">プロパティ</button>
+<button type="button" id="inspector-quantities-tab" role="tab" aria-selected="false" tabindex="-1" aria-controls="inspector-quantities" data-inspector-tab="quantities" data-i18n="quantitySummary">集計</button>
+<button type="button" id="inspector-checks-tab" role="tab" aria-selected="false" tabindex="-1" aria-controls="inspector-checks" data-inspector-tab="checks" data-i18n="inspectorChecks">チェック</button>
+</div>
+<section id="inspector-properties" role="tabpanel" aria-labelledby="inspector-properties-tab"><div id="prop-content"></div></section>
+<section id="inspector-quantities" role="tabpanel" aria-labelledby="inspector-quantities-tab" hidden>
+<div class="inspector-actions"><button type="button" data-trigger="btn-quantity-export" data-i18n="quantityCsvExport">CSV出力</button><button type="button" data-trigger="btn-quantity-detail-export" data-i18n="quantityDetailCsvExport">詳細CSV出力</button></div>
+<div id="quantity-content"></div>
+</section>
+<section id="inspector-checks" role="tabpanel" aria-labelledby="inspector-checks-tab" hidden>
+<button type="button" class="inspector-primary" data-trigger="btn-model-check" data-i18n="modelCheck">モデルチェック</button>
+<div id="model-check-content"><p class="quantity-note" data-i18n="checkGuide">モデルチェックを実行すると、問題と対象部材を確認できます。</p></div>
+</section>
+</aside>
 
+  <input type="file" id="file-import" accept=".json" hidden>
+  <input type="file" id="file-underlay-import" accept=".dxf" hidden>
+  <dialog id="copy-level-dialog" class="workspace-dialog" aria-labelledby="copy-level-title"><div class="modal-header"><h2 id="copy-level-title" data-i18n="copyLevelTitle">階コピー</h2><button type="button" data-close-dialog="copy-level-dialog" class="modal-close" data-i18n="helpClose">閉じる</button></div><div class="modal-body">    <div class="tool-filter-group">
+      <span class="layer-label" data-i18n="copyLevelTitle">階コピー</span>
+      <label class="grid-label">
+        <span data-i18n="copyLevelSource">コピー元</span>
+        <select id="sel-copy-source-layer"></select>
+      </label>
+      <label class="grid-label">
+        <span data-i18n="copyLevelTarget">コピー先</span>
+        <select id="sel-copy-target-layer"></select>
+      </label>
+      <button id="btn-copy-level" title="Copy level elements"><span data-i18n="copyLevelAction">階をコピー</span></button>
+    </div>
+</div></dialog>
   <!-- Help Modal -->
   <div id="help-modal" class="modal-overlay">
     <div class="modal-content">
@@ -367,18 +423,7 @@
             <option value="en">English</option>
           </select>
         </div>
-        <hr>
-        <button id="btn-open-user-def" class="settings-help-btn">&#9881; <span data-i18n="userDefManage">ユーザー定義</span></button>
-        <button id="btn-open-combos" class="settings-help-btn stack-gap">&#9878; <span data-i18n="comboManage">荷重組合せ</span></button>
-        <hr>
-        <div class="settings-group">
-          <label data-i18n="sampleModels">サンプルモデル</label>
-        </div>
-        <button id="btn-sample-gable" class="settings-help-btn">&#127968; <span data-i18n="sampleGable">平屋+切妻屋根</span></button>
-        <button id="btn-sample-frame" class="settings-help-btn stack-gap">&#127970; <span data-i18n="sampleFrame">2階建フレーム</span></button>
-        <button id="btn-grid-frame" class="settings-help-btn stack-gap">&#9638; <span data-i18n="gridFrameOpen">初期モデル生成…</span></button>
-        <hr>
-        <button id="btn-open-help" class="settings-help-btn">&#10067; <span data-i18n="help">ヘルプ</span></button>
+
       </div>
     </div>
   </div>
@@ -800,6 +845,6 @@
     }
   }
   </script>
-  <script type="module" src="js/app.js?v=1.2.0"></script>
+  <script type="module" src="js/app.js?v=1.3.0"></script>
 </body>
 </html>

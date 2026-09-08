@@ -84,6 +84,7 @@ test('analysis result selection uses the same 3D reveal callback', async ({ page
   const check = await openModel(page, context, baseURL, state);
   await hideTarget(page, 'isolation');
   await hideTarget(page, 'clipping');
+  await page.locator('#menu-analysis-trigger').click();
   await page.locator('#btn-analysis-workbench').click();
   await page.locator('#analysis-result-file').setInputFiles({ name: 'result.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(result)) });
   await page.locator('dialog.analysis-workbench .analysis-output').getByRole('button', { name: /M2\// }).click();
