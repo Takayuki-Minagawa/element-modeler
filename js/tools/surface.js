@@ -1,3 +1,4 @@
+import { surfacePlacementMode } from '../domain/placement.js';
 import { POLYLINE_CLOSE_TOLERANCE_PX } from '../constants.js';
 
 import { t } from '../i18n.js';
@@ -6,10 +7,7 @@ import { isSlopedSurfaceType, isWallSurfaceType } from '../domain/model.js';
 // ToolManager delegates to these cohesive behaviors; this is the existing host.
 export const surfaceTool = {
   _getEffectiveSurfaceMode() {
-    const type = this.state.surfaceDraftType;
-    if (type === 'exteriorWall') return 'polyline';
-    if (type === 'wall' || type === 'gableWall') return 'line';
-    return this.state.surfaceDraftMode;
+    return surfacePlacementMode(this.state.surfaceDraftType, this.state.surfaceDraftMode);
   },
 
   _getAutoTopLevelId() {

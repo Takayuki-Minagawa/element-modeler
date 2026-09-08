@@ -1116,6 +1116,7 @@ test('text-field undo and redo remain native while the grid modal is being edite
   const manager = Object.create(ToolManager.prototype);
   Object.assign(manager, {
     state: { currentTool: 'member' },
+    canvas2d: { preview: null, measure: null },
     history: {
       undo() { undoCalls++; return true; },
       redo() { redoCalls++; return true; },

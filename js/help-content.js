@@ -12,8 +12,8 @@ export const helpContentJa = `
 <p>線荷重は作用部材、矩形面荷重は一方向スパンと支持辺2本を明示して配分を確認します。合力・モーメントは保存しますが、端点への集中化は分布荷重の部材内曲げを再現しません。制限を確認して配分済み解析JSONを保存し、解析後は同じJSONを任意の参照モデルとして読み込んでから結果を開きます。</p>
 <p>解析は両端rigidの線形線材と節点荷重が対象です。IFCは柱・梁・階・3種の断面の限定出力です。実行手順と対応範囲は <a href="docs/analysis-tools.md" target="_blank" rel="noopener">解析・IFCツール</a>を参照してください。</p>
 <h3>平面入力を中心にした画面</h3>
-<p>左パネルの「1 入力する階」→「2 作成する部材」→「3 配置条件」の順に設定し、平面図をクリックして部材を作成します。梁・柱・床・壁などのボタンで直接切り替えられます。種類ごとの配置方法は条件欄の下に表示されます。</p>
-<p>保存・読込は「ファイル」、元に戻す・接続整理は「編集」、初期モデル生成・階・通り芯・断面定義・階コピーは「モデル」、表示フィルタは「表示」、解析出力・結果読込は「解析」から操作します。サンプルとマニュアルは「ヘルプ」にあります。</p>
+<p>左パネルの「1 入力する階」→「2 作成する部材」→「3 配置条件」の順に設定し、平面図をクリックして部材を作成します。梁・柱・床・壁などのボタンで直接切り替えられます。種類ごとの配置方法は配置条件の先頭に表示されます。入力ボタン・ツール選択・ショートカットのいずれでも、3Dから平面入力へ戻ります。</p>
+<p>保存・読込は「ファイル」、元に戻す・接続整理は「編集」、初期モデル生成・階・通り芯・断面定義・階コピーは「モデル」、表示フィルタは「表示 → 表示設定」、解析出力・結果読込は「解析」から操作します。サンプルとマニュアルは「ヘルプ」にあります。</p>
 <p>右パネルは「プロパティ / 集計 / チェック」を切り替えます。部材を選択するとプロパティが開き、モデルチェックの結果はチェックに表示されます。パネル境界の矢印で折り畳むと平面図を広く使えます。メニューは矢印キーでも移動でき、Escで閉じます。</p>
 <h3>基本操作</h3>
 <table>
@@ -107,7 +107,7 @@ export const helpContentJa = `
 <p>片流れ/単一面は矩形とポリゴン輪郭に対応します。切妻X棟、切妻Y棟、寄棟は軸に平行な矩形輪郭に対応し、非矩形・回転矩形・穴付き形状では生成されません。</p>
 
 <h3>表示・選択オプション</h3>
-<p>「表示」メニューと左パネルの「スナップ・入力補助」のチェックボックスで以下を切り替えられます:</p>
+<p>「表示 → 表示設定」では共通・平面・3Dの項目をまとめて変更できます。スナップは左パネルに常時表示し、その他の入力補助は「入力補助」を開いて設定します。入力対象が表示フィルタで隠れている場合は、配置条件欄から表示設定を開けます。</p>
 <table>
   <tr><td><b>スナップ</b></td><td>ONにするとグリッド/既存ノードに吸着します</td></tr>
   <tr><td><b>支点表示</b></td><td>OFFにすると支点を2D/3Dの両方で非表示にします。非表示中は支点のクリック選択もスキップされます</td></tr>
@@ -167,7 +167,7 @@ export const helpContentEn = `
 <p>The solver supports rigid-ended linear frame elements and nodal loads. IFC export covers beams, columns, storeys and three section profiles. See <a href="docs/analysis-tools.md" target="_blank" rel="noopener">analysis / IFC tools</a> for commands and supported inputs.</p>
 <h3>Plan input workspace</h3>
 <p>Choose the input level, choose an element, then set its placement options on the left. Click in plan to create it. The beam, column, floor and wall buttons switch tools directly; the placement guide explains each tool.</p>
-<p>Use File for saving and importing, Edit for history and connections, Model for frame generation, levels, axes, definitions and level copying, View for display filters, and Analysis for exports and results. Samples and this manual are in Help.</p>
+<p>Use File for saving and importing, Edit for history and connections, Model for frame generation, levels, axes, definitions and level copying, View → Display settings for display filters, and Analysis for exports and results. Samples and this manual are in Help.</p>
 <p>The right panel has Properties, Quantities and Checks tabs. Selection opens Properties; diagnostics open Checks. Collapse or resize either panel to make more room for the plan. Menus support arrow keys and close with Escape.</p>
 <h3>Basic Operations</h3>
 <table>
@@ -261,7 +261,7 @@ export const helpContentEn = `
 <p>Single-plane generation supports rectangular and polygon outlines. X-ridge gable, Y-ridge gable, and hip presets support axis-aligned rectangles only; non-rectangular, rotated, or opening-based shapes should be split into roof planes first.</p>
 
 <h3>Display &amp; Selection Options</h3>
-<p>Toggle the following options in the View menu and the Snap and input aids section:</p>
+<p>View → Display settings groups controls into Common, Plan and 3D. Snap is always visible in the left panel; expand Input aids for the other input options. If display filters hide the element you are placing, the placement panel provides a link to display settings.</p>
 <table>
   <tr><td><b>Snap</b></td><td>When ON, snaps to grid points and existing nodes</td></tr>
   <tr><td><b>Show Supports</b></td><td>When OFF, hides supports in both 2D and 3D views. Click selection of supports is also skipped</td></tr>

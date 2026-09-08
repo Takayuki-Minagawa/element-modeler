@@ -1097,7 +1097,6 @@ dialog::backdrop {
   border-radius: 8px;
   box-shadow: 0 12px 32px rgb(0 0 0 / 28%);
 }
-#menu-view { width: 320px; }
 .menu-dropdown button {
   display: flex;
   align-items: center;
@@ -1136,7 +1135,7 @@ button:focus-visible, select:focus-visible, input:focus-visible, summary:focus-v
 .step-number { display: grid; place-items: center; width: 20px; height: 20px; border-radius: 50%; background: var(--hover-bg); color: var(--accent); font-size: 11px; flex: 0 0 auto; }
 #toolbar .layer-controls select { padding: 7px 8px; }
 #toolbar .layer-manage-btn { width: auto; padding: 5px 8px; font-size: 11px; }
-.input-section { border-top: 1px solid var(--border); padding-top: 14px; }
+.input-section { border-top: 1px solid var(--border); padding-top: 10px; }
 .draw-tool-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
 .draw-tool, .secondary-tools button, .input-footer button, .inspector-actions button, .inspector-primary, .history-actions button {
   padding: 8px;
@@ -1148,7 +1147,7 @@ button:focus-visible, select:focus-visible, input:focus-visible, summary:focus-v
   font-size: 12px;
   cursor: pointer;
 }
-.draw-tool { display: flex; align-items: center; gap: 7px; text-align: left; min-height: 38px; }
+.draw-tool { display: flex; align-items: center; gap: 7px; text-align: left; min-height: 34px; }
 .draw-icon { color: var(--text-dim); width: 16px; text-align: center; flex: 0 0 auto; font-size: 17px; }
 [data-draw-tool][aria-pressed="true"] { border-color: var(--accent); background: var(--hover-bg); color: var(--accent); box-shadow: inset 3px 0 var(--accent); }
 [data-draw-tool][aria-pressed="true"] .draw-icon { color: var(--accent); }
@@ -1156,7 +1155,8 @@ button:focus-visible, select:focus-visible, input:focus-visible, summary:focus-v
 .secondary-tools { display: flex; gap: 6px; }
 .secondary-tools button { flex: 1; padding: 6px 4px; }
 #toolbar .tool-mode { padding: 10px 0 8px; }
-#toolbar .tool-opts .grid-label { flex-direction: column; align-items: stretch; gap: 5px; padding: 5px 0; }
+#toolbar .tool-opts .grid-label { align-items: center; gap: 8px; padding: 5px 0; }
+#toolbar .tool-opts .grid-label > span { flex: 0 0 82px; }
 #toolbar .grid-label select, #toolbar .grid-label input { padding: 6px 8px; }
 .placement-guide { color: var(--accent); background: var(--hover-bg); border-radius: 5px; margin-top: 9px; padding: 10px; font-size: 12px; line-height: 1.7; }
 .input-aids { border-top: 1px solid var(--border); padding-top: 12px; }
@@ -1204,4 +1204,26 @@ button:focus-visible, select:focus-visible, input:focus-visible, summary:focus-v
   #status-coords { display: none; }
   #workspace-context { flex-wrap: wrap; gap: 4px 8px; }
   .tab-btn { padding: 0 12px; }
+}
+
+/* Detailed display options retain native labels and keyboard behavior. */
+.display-dialog { width: min(920px, 94vw); }
+.display-settings-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; }
+.display-group { min-width: 0; border: 1px solid var(--border); border-radius: 6px; padding: 12px; }
+.display-group legend { font-weight: 600; color: var(--accent); padding: 0 6px; }
+.display-group .grid-label > select { width: 100%; padding: 7px; }
+.display-group .toggle-label { padding: 7px 0; }
+.input-snap { border-top: 1px solid var(--border); padding-top: 8px; }
+.placement-visibility-note { margin: 8px 0; padding: 8px; border: 1px solid var(--accent); border-radius: 4px; font-size: 12px; line-height: 1.6; }
+.placement-visibility-note button { display: block; background: transparent; border: 0; color: var(--accent); text-decoration: underline; cursor: pointer; padding-top: 4px; }
+
+@media (height <= 800px) {
+  #toolbar { gap: 8px; padding-top: 10px; padding-bottom: 10px; }
+  .step-label { margin-bottom: 7px; }
+  .draw-tool { padding: 6px; }
+  .placement-guide { margin-top: 4px; padding: 7px 9px; }
+}
+
+@media (width <= 800px) {
+  .display-settings-grid { grid-template-columns: 1fr; gap: 12px; }
 }

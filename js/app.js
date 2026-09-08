@@ -26,7 +26,8 @@ import { initLang, setLang, getLang, t } from './i18n.js';
 import { getHelpContent } from './help-content.js';
 import { invalidateCssVarCache } from './dom-utils.js';
 import { showNotice } from './notice.js';
-import { initWorkspace, showInspector } from './ui/workspace.js';
+import { initWorkspace } from './ui/workspace.js';
+import { showInspector } from './ui/inspector.js';
 import { initSidePanels } from './side-panels.js';
 import { initUserDefModal } from './user-def-modal.js';
 import { initLayerModal } from './layer-modal.js';
@@ -153,13 +154,11 @@ function getIntermediateColumnLevels(member) {
 }
 
 const ui = new UI(state, {
-  onToolChange() {
-    toolManager?.cancelPlacement();
-    update();
-  },
+  onBeforePlacementChange() { toolManager?.cancelPlacement(); },
+  onToolChange() { activatePlanInput(); },
   onSnapToggle() { update(); },
   onGridChange() { update(); },
-  onLayerChange() { update(); },
+  onLayerChange() { activatePlanInput(); },
   onPropertyChange() { update(); },
   onModelCommand(mutate) {
     return executeModelCommand(history, state, mutate);
@@ -354,7 +353,7 @@ initSidePanels({
 const tab2d = document.getElementById('tab-2d');
 const tab3d = document.getElementById('tab-3d');
 
-tab2d.addEventListener('click', () => {
+function activatePlanInput() {
   activeView = '2d';
   tab2d.classList.add('active');
   tab3d.classList.remove('active');
@@ -365,7 +364,9 @@ tab2d.addEventListener('click', () => {
   canvas2d.setActive(true);
   canvas2d.resize();
   update();
-});
+}
+
+tab2d.addEventListener('click', activatePlanInput);
 
 tab3d.addEventListener('click', async () => {
   activeView = '3d';
@@ -783,7 +784,7 @@ window.addEventListener('keydown', (e) => {
 }, true);
 
 // --- Plan-focused workspace ---
-workspace = initWorkspace({ state, history, ui, toolManager, update, openRecovery: () => recoveryUI.open() });
+workspace = initWorkspace({ state, history, ui, toolManager, openRecovery: () => recoveryUI.open() });
 
 // --- Start ---
 
