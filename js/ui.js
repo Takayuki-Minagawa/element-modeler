@@ -568,7 +568,7 @@ export class UI {
       : null;
 
     if (!member) {
-      container.innerHTML = `<p class="prop-placeholder">${t('noSelection')}</p>`;
+      container.innerHTML = `<p class="prop-placeholder">${t('noSelection')}</p><p class="empty-selection-guide">${t('selectionGuide')}</p>`;
       return;
     }
 
@@ -828,6 +828,7 @@ export class UI {
     });
     this.refreshLevelSelectors();
     this._updateToolUI();
+    this.callbacks.onPropertyChange?.();
     this.updateStatusBar();
     this.refreshQuantitySummary({ force: true });
     this.updatePropertyPanel();

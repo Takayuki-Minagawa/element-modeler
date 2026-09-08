@@ -11,6 +11,10 @@ export const helpContentJa = `
 <p>「解析結果・荷重配分」から、同じCADモデルを外部OpenSeesPyで解析した結果JSONを読み込みます。表示面と変形倍率を指定し、変位・反力を確認できます。モデルが変わった結果は再読込・再解析が必要です。</p>
 <p>線荷重は作用部材、矩形面荷重は一方向スパンと支持辺2本を明示して配分を確認します。合力・モーメントは保存しますが、端点への集中化は分布荷重の部材内曲げを再現しません。制限を確認して配分済み解析JSONを保存し、解析後は同じJSONを任意の参照モデルとして読み込んでから結果を開きます。</p>
 <p>解析は両端rigidの線形線材と節点荷重が対象です。IFCは柱・梁・階・3種の断面の限定出力です。実行手順と対応範囲は <a href="docs/analysis-tools.md" target="_blank" rel="noopener">解析・IFCツール</a>を参照してください。</p>
+<h3>平面入力を中心にした画面</h3>
+<p>左パネルの「1 入力する階」→「2 作成する部材」→「3 配置条件」の順に設定し、平面図をクリックして部材を作成します。梁・柱・床・壁などのボタンで直接切り替えられます。種類ごとの配置方法は条件欄の下に表示されます。</p>
+<p>保存・読込は「ファイル」、元に戻す・接続整理は「編集」、初期モデル生成・階・通り芯・断面定義・階コピーは「モデル」、表示フィルタは「表示」、解析出力・結果読込は「解析」から操作します。サンプルとマニュアルは「ヘルプ」にあります。</p>
+<p>右パネルは「プロパティ / 集計 / チェック」を切り替えます。部材を選択するとプロパティが開き、モデルチェックの結果はチェックに表示されます。パネル境界の矢印で折り畳むと平面図を広く使えます。メニューは矢印キーでも移動でき、Escで閉じます。</p>
 <h3>基本操作</h3>
 <table>
   <tr><td><b>線材作成</b></td><td>「線材」ツール(Mキー)を選択し、キャンバス上で始点をクリック → 終点をクリック</td></tr>
@@ -28,7 +32,7 @@ export const helpContentJa = `
 
 <h3>初期モデル生成（格子フレーム）</h3>
 <ol>
-  <li>設定 →「初期モデル生成…」を開き、階数を設定します。階数に応じて階別設定テーブルの行が増減します。増加時は最上階の行が複製され、減少時は上の階から削除されます（下層階の入力は保持されます）。</li>
+  <li>モデル →「初期モデル生成…」を開き、階数を設定します。階数に応じて階別設定テーブルの行が増減します。増加時は最上階の行が複製され、減少時は上の階から削除されます（下層階の入力は保持されます）。</li>
   <li>各階の行で階高（mm）と、柱断面・梁断面・床断面・外壁断面を現在のモデルの断面カタログから選択します。最上部の「一括」行に入力・選択すると、その列の全階へ反映されます。一括欄は反映後に空欄へ戻るため、個別の階を変更した後でも同じ値をもう一度適用できます。</li>
   <li>「生成する要素」の柱・梁・床・外壁・基礎チェックで生成対象を選びます。OFF の要素に対応する断面列は無効表示になります（値は保持）。柱・梁の少なくとも一方を ON にする必要があります。</li>
   <li>X方向・Y方向スパンは mm 単位で、カンマ、読点、空白区切りで入力します。繰り返し記法 <code>N@L</code>（例: <code>3@6000, 5000</code> は <code>6000, 6000, 6000, 5000</code> と同じ）が使えます。</li>
@@ -41,7 +45,7 @@ export const helpContentJa = `
 
 <h3>通り芯・下絵・軸組図</h3>
 <table>
-  <tr><td><b>通り芯</b></td><td>ツールバーの「通り芯管理」でX/Y通りの名前と座標を定義。2Dに一点鎖線で表示され、交点にスナップします</td></tr>
+  <tr><td><b>通り芯</b></td><td>モデルメニューの「通り芯管理」でX/Y通りの名前と座標を定義。2Dに一点鎖線で表示され、交点にスナップします</td></tr>
   <tr><td><b>下絵DXF</b></td><td>「下絵DXF読込」でDXF(LINE/POLYLINE/CIRCLE/ARC)を下絵表示。「下絵表示」で切替、「下絵クリア」で削除</td></tr>
   <tr><td><b>軸組図</b></td><td>上部「軸組図」ボタンで通り芯を選び、その構面の立面（柱・梁・ブレース・レベル線）を表示</td></tr>
   <tr><td><b>モデル整形</b></td><td>右パネルの「節点マージ」で近接節点を統合、「交差部材を分割」で交差/T字部の梁・水平ブレースを分割し節点共有</td></tr>
@@ -50,7 +54,7 @@ export const helpContentJa = `
 <h3>荷重ケースと解析エクスポート</h3>
 <table>
   <tr><td><b>荷重ケース</b></td><td>荷重ツールとプロパティパネルで DL/LL/EQX/EQY/WX/WY を設定</td></tr>
-  <tr><td><b>荷重組合せ</b></td><td>設定 → 荷重組合せ でケースごとの係数を編集・追加</td></tr>
+  <tr><td><b>荷重組合せ</b></td><td>解析 → 荷重組合せ でケースごとの係数を編集・追加</td></tr>
   <tr><td><b>解析出力</b></td><td>「解析JSON出力」「解析CSV出力」で数値ID・元ID・共有3D節点・材料/断面物性・ばね剛性・質量源・支点・荷重・組合せをv2形式で出力（元単位 mm, N）</td></tr>
   <tr><td><b>図面出力</b></td><td>「図面DXF出力」「PNG出力」で平面図を出力</td></tr>
 </table>
@@ -103,7 +107,7 @@ export const helpContentJa = `
 <p>片流れ/単一面は矩形とポリゴン輪郭に対応します。切妻X棟、切妻Y棟、寄棟は軸に平行な矩形輪郭に対応し、非矩形・回転矩形・穴付き形状では生成されません。</p>
 
 <h3>表示・選択オプション</h3>
-<p>ツールバーのチェックボックスで以下を切り替えられます:</p>
+<p>「表示」メニューと左パネルの「スナップ・入力補助」のチェックボックスで以下を切り替えられます:</p>
 <table>
   <tr><td><b>スナップ</b></td><td>ONにするとグリッド/既存ノードに吸着します</td></tr>
   <tr><td><b>支点表示</b></td><td>OFFにすると支点を2D/3Dの両方で非表示にします。非表示中は支点のクリック選択もスキップされます</td></tr>
@@ -116,21 +120,21 @@ export const helpContentJa = `
 </table>
 
 <h3>設定 / ユーザー定義</h3>
-<p>ツールバー上部の ⚙ 設定ボタンから設定モーダルを開きます。</p>
+<p>画面右上の設定ボタンから設定モーダルを開きます。</p>
 <ul>
   <li><b>テーマ</b> - ダーク / ライトを切替</li>
   <li><b>言語</b> - 日本語 / English を切替</li>
-  <li><b>ユーザー定義</b> - 材料 / 断面 / バネ定義と解析物性を追加・管理</li>
-  <li><b>ヘルプ</b> - この簡易マニュアルを表示</li>
+  <li><b>モデル → ユーザー定義</b> - 材料 / 断面 / バネ定義と解析物性を追加・管理</li>
+  <li><b>ヘルプメニュー</b> - この簡易マニュアルとサンプルモデル</li>
 </ul>
 <p>材料には E・G・密度、線材断面には任意の A・Iy・Iz・J 上書きと、せん断用断面積比 Ay/A・Az/A を設定できます。矩形・H形鋼・ボックス断面を選び、「形状から性能を計算」で整数の断面特性を入力できます。空欄の断面特性は選択した形状から算定されます。H形鋼のフィレット、ボックス断面の角Rは含めません。ばねには kr・kt を設定でき、kr の空欄は解析出力の警告になります。組み込み材料値は試行値なので解析前に確認してください。既定の断面・バネ（例: <code>_G</code>, <code>_C</code>, <code>_SP</code>）は編集・削除できません。</p>
-<p>ツールバーの「解析出力設定」では荷重ケース別の質量換算係数と、部材自重を密度から算定するかDLに含めるかを指定します。</p>
+<p>解析メニューの「解析出力設定」では荷重ケース別の質量換算係数と、部材自重を密度から算定するかDLに含めるかを指定します。</p>
 <p>解析JSON/CSV出力の直前にはプリフライト検査を行います。元モデルの整合エラー、必須の材料・ばね・質量設定の未定義、線材要素ゼロ、または連結成分に未拘束の剛体運動がある場合は出力を中止し、結果をモデルチェック欄に表示します。支持条件の検査対象は構造全体の剛体6自由度であり、ソルバーによる剛性・内部機構の検査を代替するものではありません。</p>
 <p>「同グループ一覧」で現在のグループ定義を別画面で確認できます。</p>
 <p>「エクスポート」でユーザー定義をJSONファイルとしてダウンロード、「インポート」で別環境からユーザー定義を読み込めます。</p>
 
 <h3>レイヤー管理</h3>
-<p>レイヤー選択横の ⚙ ボタンからレイヤー管理モーダルを開きます。</p>
+<p>入力階横の「管理」ボタンからレイヤー管理モーダルを開きます。</p>
 <ul>
   <li><b>追加</b> - 新しいレイヤーを追加（z値は自動計算）</li>
   <li><b>編集</b> - レイヤー名とz値（高さ mm）を直接編集</li>
@@ -141,10 +145,10 @@ export const helpContentJa = `
 <h3>データ入出力</h3>
 <p>CADデータ（図面情報）とユーザー定義（材料・断面・バネ）は<b>別ファイルとしても分離管理</b>できます。</p>
 <table>
-  <tr><td><b>CAD保存</b></td><td>ツールバーの「CAD保存」で図面データをJSONファイルとしてダウンロード。材料カタログは全件、断面・バネはデフォルト定義と使用中のカスタム定義を含みます</td></tr>
-  <tr><td><b>CAD読込</b></td><td>ツールバーの「CAD読込」でJSONファイルを読み込み。既にメモリ上にあるカスタム定義は維持されます</td></tr>
-  <tr><td><b>定義エクスポート</b></td><td>設定 → ユーザー定義 →「エクスポート」でカスタム定義を別ファイルに保存</td></tr>
-  <tr><td><b>定義インポート</b></td><td>設定 → ユーザー定義 →「インポート」で別環境のカスタム定義を読み込み。CADファイルから読込済みの定義を含め、同名の定義はスキップされます</td></tr>
+  <tr><td><b>CAD保存</b></td><td>ファイルメニューの「CAD保存」で図面データをJSONファイルとしてダウンロード。材料カタログは全件、断面・バネはデフォルト定義と使用中のカスタム定義を含みます</td></tr>
+  <tr><td><b>CAD読込</b></td><td>ファイルメニューの「CAD読込」でJSONファイルを読み込み。既にメモリ上にあるカスタム定義は維持されます</td></tr>
+  <tr><td><b>定義エクスポート</b></td><td>モデル → ユーザー定義 →「エクスポート」でカスタム定義を別ファイルに保存</td></tr>
+  <tr><td><b>定義インポート</b></td><td>モデル → ユーザー定義 →「インポート」で別環境のカスタム定義を読み込み。CADファイルから読込済みの定義を含め、同名の定義はスキップされます</td></tr>
 </table>
 <p>定義インポート時、追加件数とスキップ件数が通知されます。断面定義・バネ定義にはメモ（説明テキスト）を付与できます。</p>
 <p>ノード・部材・面材・荷重・支点IDはCADファイルに保存され、読込後も保持されます。旧バージョンで保存されたファイルも読み込めます。</p>
@@ -152,7 +156,7 @@ export const helpContentJa = `
 
 export const helpContentEn = `
 <h3>Save status and recovery</h3>
-<p>Autosave keeps the latest five generations. The toolbar shows saving, saved or failed status and the last successful time. Open Recovery history to choose a generation; Undo reverses restoration in one step. Failed saves can be retried and retain the last successful generation. Continue saving CAD files as well.</p>
+<p>Autosave keeps the latest five generations. The status bar shows saving, saved or failed status and the last successful time. Open Recovery history to choose a generation; Undo reverses restoration in one step. Failed saves can be retried and retain the last successful generation. Continue saving CAD files as well.</p>
 <h3>Navigate from diagnostics</h3>
 <p>Filter Model Check by severity and element type, then select a target button. The app switches level, selects the target and frames it, clearing necessary display filters. Edit its properties and run the check again.</p>
 <h3>3D clipping, isolation and GLB</h3>
@@ -161,6 +165,10 @@ export const helpContentEn = `
 <p>Open Results / load assignment and load the result JSON produced by the external OpenSeesPy CLI from the same CAD model. Choose projection and deformation scale to inspect displacements and reactions. Changed models require new analysis and result import.</p>
 <p>For line loads choose one member; for rectangular area loads choose the one-way span and both supporting edges. The preview preserves resultant forces and moments, but endpoint lumping does not reproduce distributed-load member bending. Accept this limitation before exporting distributed analysis JSON. After solving it, load that same JSON as the optional reference before loading results.</p>
 <p>The solver supports rigid-ended linear frame elements and nodal loads. IFC export covers beams, columns, storeys and three section profiles. See <a href="docs/analysis-tools.md" target="_blank" rel="noopener">analysis / IFC tools</a> for commands and supported inputs.</p>
+<h3>Plan input workspace</h3>
+<p>Choose the input level, choose an element, then set its placement options on the left. Click in plan to create it. The beam, column, floor and wall buttons switch tools directly; the placement guide explains each tool.</p>
+<p>Use File for saving and importing, Edit for history and connections, Model for frame generation, levels, axes, definitions and level copying, View for display filters, and Analysis for exports and results. Samples and this manual are in Help.</p>
+<p>The right panel has Properties, Quantities and Checks tabs. Selection opens Properties; diagnostics open Checks. Collapse or resize either panel to make more room for the plan. Menus support arrow keys and close with Escape.</p>
 <h3>Basic Operations</h3>
 <table>
   <tr><td><b>Create line</b></td><td>Select "Line" tool (M key), click start point → click end point</td></tr>
@@ -191,7 +199,7 @@ export const helpContentEn = `
 
 <h3>Grid Axes, Underlay &amp; Elevation</h3>
 <table>
-  <tr><td><b>Grid axes</b></td><td>"Grid Axes" in the toolbar defines named X/Y axis lines. They render as dash-dot lines and snap at intersections</td></tr>
+  <tr><td><b>Grid axes</b></td><td>Model → Grid Axes defines named X/Y axis lines. They render as dash-dot lines and snap at intersections</td></tr>
   <tr><td><b>DXF underlay</b></td><td>"Import DXF underlay" shows DXF (LINE/POLYLINE/CIRCLE/ARC) beneath the plan. Toggle with "Show underlay", remove with "Clear underlay"</td></tr>
   <tr><td><b>Elevation</b></td><td>The "Elevation" button renders the frame elevation (columns, beams, braces, level lines) of a selected grid axis</td></tr>
   <tr><td><b>Model cleanup</b></td><td>"Merge nodes" unifies nearby nodes; "Split crossing members" splits beams/horizontal braces at crossings and T-junctions to share nodes</td></tr>
@@ -200,7 +208,7 @@ export const helpContentEn = `
 <h3>Load Cases &amp; Analysis Export</h3>
 <table>
   <tr><td><b>Load cases</b></td><td>Assign DL/LL/EQX/EQY/WX/WY in the load tool and property panel</td></tr>
-  <tr><td><b>Combinations</b></td><td>Settings → Load Combinations to edit per-case factors</td></tr>
+  <tr><td><b>Combinations</b></td><td>Analysis → Load Combinations to edit per-case factors</td></tr>
   <tr><td><b>Analysis export</b></td><td>"Analysis JSON" / "Analysis CSV" export v2 numeric/source IDs, shared 3D nodes, material/section properties, spring stiffness, mass sources, supports, loads, and combinations (source units: mm, N)</td></tr>
   <tr><td><b>Drawing export</b></td><td>"Plan DXF" / "Plan PNG" export the plan drawing</td></tr>
 </table>
@@ -253,7 +261,7 @@ export const helpContentEn = `
 <p>Single-plane generation supports rectangular and polygon outlines. X-ridge gable, Y-ridge gable, and hip presets support axis-aligned rectangles only; non-rectangular, rotated, or opening-based shapes should be split into roof planes first.</p>
 
 <h3>Display &amp; Selection Options</h3>
-<p>Toggle the following options using toolbar checkboxes:</p>
+<p>Toggle the following options in the View menu and the Snap and input aids section:</p>
 <table>
   <tr><td><b>Snap</b></td><td>When ON, snaps to grid points and existing nodes</td></tr>
   <tr><td><b>Show Supports</b></td><td>When OFF, hides supports in both 2D and 3D views. Click selection of supports is also skipped</td></tr>
@@ -266,19 +274,19 @@ export const helpContentEn = `
 </table>
 
 <h3>Settings / User Definitions</h3>
-<p>Click the ⚙ Settings button at the top of the toolbar to open the settings modal.</p>
+<p>Click the ⚙ Settings button at the top right of the screen to open the settings modal.</p>
 <ul>
   <li><b>Theme</b> - Switch between Dark / Light</li>
   <li><b>Language</b> - Switch between Japanese / English</li>
-  <li><b>User Definitions</b> - Add/manage material, section, spring, and analysis-property definitions</li>
-  <li><b>Help</b> - Opens this quick manual</li>
+  <li><b>Model → User Definitions</b> - Add/manage material, section, spring, and analysis-property definitions</li>
+  <li><b>Help menu</b> - Opens this quick manual</li>
 </ul>
 <p>Default definitions (for example <code>_G</code>, <code>_C</code>, <code>_S</code>, <code>_OW</code>, <code>_IW</code>, <code>_SP</code>) cannot be edited or deleted. Custom names cannot start with <code>_</code>. Line section definitions can set I/J end condition presets used when placing new lines. After registration, fields other than name can be updated (size, color, end presets, memo), and custom definitions can be deleted unless they are currently in use.</p>
 <p>Use "Group List" to review registered definitions for the current group in a separate dialog.</p>
 <p>Use "Export" to download user definitions as a JSON file, and "Import" to load definitions from another environment.</p>
 
 <h3>Layer Management</h3>
-<p>Click the ⚙ button next to the layer selector to open the layer management modal.</p>
+<p>Click Manage next to the input level selector to open the layer management modal.</p>
 <ul>
   <li><b>Add</b> - Add a new layer (z value auto-calculated)</li>
   <li><b>Edit</b> - Directly edit layer name and z value (height in mm)</li>
@@ -292,10 +300,10 @@ export const helpContentEn = `
 <p>Analysis JSON/CSV export runs a preflight check first. Export is stopped when the source model is inconsistent, required material/spring/mass properties are undefined, no member elements exist, or any disconnected component retains rigid-body motion. The restraint check covers the six whole-body degrees of freedom; it does not replace a solver stiffness or internal-mechanism check. Results are shown in Model Check.</p>
 <p>CAD data (drawing) and user definitions (materials/sections/springs) can also be <b>managed as separate files</b>.</p>
 <table>
-  <tr><td><b>Save CAD</b></td><td>Click "Save CAD" in the toolbar to download drawing data as JSON. The complete material catalog plus default and in-use custom section/spring definitions are included</td></tr>
-  <tr><td><b>Load CAD</b></td><td>Click "Load CAD" in the toolbar to load a JSON file. Existing custom definitions in memory are preserved</td></tr>
-  <tr><td><b>Export Defs</b></td><td>Settings → User Definitions → "Export" to save custom definitions to a separate file</td></tr>
-  <tr><td><b>Import Defs</b></td><td>Settings → User Definitions → "Import" to load custom definitions from another environment. Definitions with duplicate names (including those loaded from CAD files) are skipped</td></tr>
+  <tr><td><b>Save CAD</b></td><td>Click File → Save CAD to download drawing data as JSON. The complete material catalog plus default and in-use custom section/spring definitions are included</td></tr>
+  <tr><td><b>Load CAD</b></td><td>Click File → Load CAD to load a JSON file. Existing custom definitions in memory are preserved</td></tr>
+  <tr><td><b>Export Defs</b></td><td>Model → User Definitions → "Export" to save custom definitions to a separate file</td></tr>
+  <tr><td><b>Import Defs</b></td><td>Model → User Definitions → "Import" to load custom definitions from another environment. Definitions with duplicate names (including those loaded from CAD files) are skipped</td></tr>
 </table>
 <p>When importing, the number of added and skipped items is shown. Section and spring definitions can include a memo (description text).</p>
 <p>Node, member, surface, load, and support IDs are written to CAD files and preserved when reloaded. Files saved with older versions can still be loaded.</p>

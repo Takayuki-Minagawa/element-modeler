@@ -359,36 +359,7 @@ export class ToolManager {
 
     // Delete (skip when focused on input/select)
     if ((e.key === 'Delete' || e.key === 'Backspace') && !isEditableTarget) {
-      this.cancelDrag();
-      if (this.state.selectedSupportId) {
-        const support = this.state.getSupport(this.state.selectedSupportId);
-        if (!this.state.isSupportSelectable(support)) return;
-        this.history.save();
-        this.state.removeSupport(this.state.selectedSupportId);
-        this.onUpdate();
-      } else if (this.state.selectedLoadId) {
-        const load = this.state.getLoad(this.state.selectedLoadId);
-        if (!this.state.isLoadSelectable(load)) return;
-        this.history.save();
-        this.state.removeLoad(this.state.selectedLoadId);
-        this.onUpdate();
-      } else if (this.state.selectedSurfaceId) {
-        const surface = this.state.getSurface(this.state.selectedSurfaceId);
-        if (!this.state.isSurfaceSelectable(surface)) return;
-        this.history.save();
-        this.state.removeSurface(this.state.selectedSurfaceId);
-        this.onUpdate();
-      } else if (this.state.selectedMemberIds.length > 0) {
-        const removable = this.state.selectedMemberIds
-          .map(id => this.state.getMember(id))
-          .filter(member => member && this.state.isMemberSelectable(member));
-        if (!removable.length) return;
-        this.history.save();
-        for (const member of removable) {
-          this.state.removeMember(member.id);
-        }
-        this.onUpdate();
-      }
+      this.deleteSelection();
     }
 
     // Undo/Redo
@@ -409,6 +380,52 @@ export class ToolManager {
         this.state.surfaceDraftMode === 'polyline' &&
         (e.key === 'Enter' || e.key === 'Return')) {
       this._finishSurfacePolyline();
+    }
+  }
+
+  // Shared by toolbar commands and tool changes; preserves model selection.
+  cancelPlacement() {
+    this.cancelDrag();
+    this.cancelSplitPoint({ update: false });
+    this._memberStart = null;
+    this._surfaceStart = null;
+    this._surfacePolyline = [];
+    this._loadStart = null;
+    this._measureStart = null;
+    this.canvas2d.preview = null;
+    this.canvas2d.measure = null;
+  }
+
+  deleteSelection() {
+    this.cancelDrag();
+    if (this.state.selectedSupportId) {
+      const support = this.state.getSupport(this.state.selectedSupportId);
+      if (!this.state.isSupportSelectable(support)) return;
+      this.history.save();
+      this.state.removeSupport(this.state.selectedSupportId);
+      this.onUpdate();
+    } else if (this.state.selectedLoadId) {
+      const load = this.state.getLoad(this.state.selectedLoadId);
+      if (!this.state.isLoadSelectable(load)) return;
+      this.history.save();
+      this.state.removeLoad(this.state.selectedLoadId);
+      this.onUpdate();
+    } else if (this.state.selectedSurfaceId) {
+      const surface = this.state.getSurface(this.state.selectedSurfaceId);
+      if (!this.state.isSurfaceSelectable(surface)) return;
+      this.history.save();
+      this.state.removeSurface(this.state.selectedSurfaceId);
+      this.onUpdate();
+    } else if (this.state.selectedMemberIds.length > 0) {
+      const removable = this.state.selectedMemberIds
+        .map(id => this.state.getMember(id))
+        .filter(member => member && this.state.isMemberSelectable(member));
+      if (!removable.length) return;
+      this.history.save();
+      for (const member of removable) {
+        this.state.removeMember(member.id);
+      }
+      this.onUpdate();
     }
   }
 

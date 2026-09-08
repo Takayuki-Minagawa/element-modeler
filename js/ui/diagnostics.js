@@ -1,3 +1,4 @@
+import { showInspector } from './workspace.js';
 import { diagnosticTargets, filterDiagnostics, resolveDiagnosticTarget } from '../domain/diagnostics.js';
 import { diagnosticText, formatDiagnostic } from './diagnostic-messages.js';
 import { escapeHtml } from '../dom-utils.js';
@@ -6,6 +7,7 @@ import { getLang, t } from '../i18n.js';
 export function renderDiagnostics(ui, issues, summaryHtml = '') {
   const container = document.getElementById('model-check-content');
   if (!container) return;
+  showInspector('checks', { reveal: true });
   ui._diagnosticIssues = issues;
   ui._diagnosticSummaryHtml = summaryHtml;
   const filters = ui._diagnosticFilters ||= { severity: 'all', elementType: 'all' };

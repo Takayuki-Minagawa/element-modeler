@@ -26,6 +26,7 @@ import { initLang, setLang, getLang, t } from './i18n.js';
 import { getHelpContent } from './help-content.js';
 import { invalidateCssVarCache } from './dom-utils.js';
 import { showNotice } from './notice.js';
+import { initWorkspace, showInspector } from './ui/workspace.js';
 import { initSidePanels } from './side-panels.js';
 import { initUserDefModal } from './user-def-modal.js';
 import { initLayerModal } from './layer-modal.js';
@@ -66,6 +67,7 @@ let viewerTools = null;
 let viewerToolsState = null;
 let recoveryUI = null;
 let analysisWorkbench = null;
+let workspace = null;
 
 async function loadViewer3D() {
   if (viewer3d) return viewer3d;
@@ -82,6 +84,7 @@ async function loadViewer3D() {
     viewer3d.onPick = (pick) => {
       if (pick) {
         state.select(pick.kind, pick.id);
+        showInspector('properties');
       } else {
         state.clearSelection();
       }
@@ -117,6 +120,7 @@ function update() {
   ui.updateZoom(canvas2d.camera.scale);
   recoveryUI?.applyLanguage();
   analysisWorkbench?.refresh();
+  workspace?.requestRefresh();
 }
 
 // --- UI ---
@@ -150,8 +154,7 @@ function getIntermediateColumnLevels(member) {
 
 const ui = new UI(state, {
   onToolChange() {
-    toolManager?.cancelDrag();
-    toolManager?.cancelSplitPoint({ restoreTool: false, update: false });
+    toolManager?.cancelPlacement();
     update();
   },
   onSnapToggle() { update(); },
@@ -778,6 +781,9 @@ window.addEventListener('keydown', (e) => {
     }
   }
 }, true);
+
+// --- Plan-focused workspace ---
+workspace = initWorkspace({ state, history, ui, toolManager, update, openRecovery: () => recoveryUI.open() });
 
 // --- Start ---
 

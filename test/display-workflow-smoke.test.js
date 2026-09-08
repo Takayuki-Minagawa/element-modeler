@@ -34,7 +34,7 @@ test('display workflow controls are exposed in the toolbar and property panel', 
     assert.match(html, new RegExp(`id="${id}"`));
   }
 
-  assert.match(css, /grid-template-columns:\s*var\(--toolbar-w\)\s+var\(--side-resizer-w\)\s+1fr\s+var\(--side-resizer-w\)\s+var\(--panel-w\)/);
+  assert.match(css, /grid-template-columns:\s*var\(--toolbar-w\)\s+var\(--side-resizer-w\)\s+minmax\(0,\s*1fr\)\s+var\(--side-resizer-w\)\s+var\(--panel-w\)/);
   assert.match(css, /body\.toolbar-collapsed/);
   assert.match(css, /body\.property-collapsed/);
   assert.match(sidePanelsSource, /lineframe-toolbar-width/);
