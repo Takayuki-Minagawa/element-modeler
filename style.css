@@ -1227,3 +1227,32 @@ button:focus-visible, select:focus-visible, input:focus-visible, summary:focus-v
 @media (width <= 800px) {
   .display-settings-grid { grid-template-columns: 1fr; gap: 12px; }
 }
+
+/* Optional precise input and a readable model inventory. */
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+.coordinate-input fieldset { border: 0; padding: 0; margin: 8px 0; min-width: 0; }
+.coordinate-fields { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 8px; }
+.coordinate-fields input { background: var(--bg); color: var(--text); border: 1px solid var(--border); border-radius: 3px; width: 100%; min-width: 0; padding: 6px; }
+.coordinate-input button, .element-pagination button, .element-table-wrap button { background: var(--bg); color: var(--text); border: 1px solid var(--border); border-radius: 4px; padding: 7px 9px; cursor: pointer; font: inherit; font-size: 12px; }
+#btn-coordinate-add { width: 100%; margin-top: 9px; color: var(--accent); border-color: var(--accent); }
+.coordinate-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+.coordinate-actions button { flex: 1; }
+.coordinate-input .tool-hint { margin: 8px 0; line-height: 1.7; overflow-wrap: anywhere; }
+.model-context { font-size: 11px; line-height: 1.7; color: var(--text-dim); overflow-wrap: anywhere; }
+.model-context p { margin: 0 0 5px; }
+.element-list-dialog { width: min(1000px, 94vw); }
+.element-filters { display: grid; grid-template-columns: 1fr 1fr 2fr; gap: 12px; }
+.element-filters label { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.element-filters input, .element-filters select { background: var(--bg); color: var(--text); border: 1px solid var(--border); border-radius: 3px; width: 100%; min-width: 0; padding: 7px; }
+.element-table-wrap { overflow-x: auto; }
+.element-table-wrap table { min-width: 600px; }
+.element-table-wrap th { white-space: nowrap; }
+.element-table-wrap td { overflow-wrap: anywhere; }
+.element-table-wrap td:last-child { min-width: 200px; max-width: 450px; }
+.element-table-wrap button { color: var(--accent); }
+.element-pagination { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; }
+
+@media (width <= 800px) {
+  .element-filters { grid-template-columns: 1fr 1fr; }
+  .element-filters label:last-child { grid-column: 1 / -1; }
+}

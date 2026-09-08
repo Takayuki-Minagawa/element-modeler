@@ -47,13 +47,16 @@ export const surfaceTool = {
   },
 
   _surfaceDown(e) {
-    const snapped = this._getSnappedPos(e);
+    return this._surfacePoint(this._getSnappedPos(e));
+  },
+
+  _surfacePoint(snapped, { exact = false } = {}) {
     const mode = this._getEffectiveSurfaceMode();
     const type = this.state.surfaceDraftType;
 
     if (mode === 'polyline') {
       this._surfaceStart = null;
-      this._surfacePolylineDown(snapped);
+      this._surfacePolylineDown(snapped, { exact });
       return;
     }
 
@@ -132,7 +135,7 @@ export const surfaceTool = {
     this.onUpdate();
   },
 
-  _surfacePolylineDown(snapped) {
+  _surfacePolylineDown(snapped, { exact = false } = {}) {
     if (this._surfacePolyline.length === 0) {
       this._surfacePolyline.push({ x: snapped.x, y: snapped.y });
       this.state.clearSelection();
@@ -142,7 +145,7 @@ export const surfaceTool = {
 
     const first = this._surfacePolyline[0];
     const closeTol = POLYLINE_CLOSE_TOLERANCE_PX / this.canvas2d.camera.scale;
-    if (this._surfacePolyline.length >= 3 &&
+    if (!exact && this._surfacePolyline.length >= 3 &&
         Math.hypot(snapped.x - first.x, snapped.y - first.y) <= closeTol) {
       this._finishSurfacePolyline();
       return;

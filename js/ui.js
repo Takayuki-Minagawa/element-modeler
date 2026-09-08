@@ -1,3 +1,4 @@
+import { associateFieldLabels } from './ui/field-labels.js';
 import { toolForKey } from './keyboard.js';
 import { executeModelMutation } from './commands/model-command.js';
 import { renderDiagnostics } from './ui/diagnostics.js';
@@ -578,7 +579,9 @@ export class UI {
   // Batch panel shown when 2+ members are selected: summary, batch section
   // change and the copy/transform operations (mirror / rotate / array).
   _renderMultiMemberProperties(...args) {
-    return memberProperties._renderMultiMemberProperties.apply(this, args);
+    const result = memberProperties._renderMultiMemberProperties.apply(this, args);
+    associateFieldLabels(args[0]);
+    return result;
   }
 
   // Shared property-input binder used by every _renderXxxProperties method.
@@ -595,11 +598,15 @@ export class UI {
   }
 
   _renderMemberProperties(...args) {
-    return memberProperties._renderMemberProperties.apply(this, args);
+    const result = memberProperties._renderMemberProperties.apply(this, args);
+    associateFieldLabels(args[0]);
+    return result;
   }
 
   _renderSurfaceProperties(...args) {
-    return surfaceProperties._renderSurfaceProperties.apply(this, args);
+    const result = surfaceProperties._renderSurfaceProperties.apply(this, args);
+    associateFieldLabels(args[0]);
+    return result;
   }
 
   // Per-type surface HTML fragments. Kept as pure string builders so the
@@ -645,11 +652,15 @@ export class UI {
   }
 
   _renderLoadProperties(...args) {
-    return loadProperties._renderLoadProperties.apply(this, args);
+    const result = loadProperties._renderLoadProperties.apply(this, args);
+    associateFieldLabels(args[0]);
+    return result;
   }
 
   _renderSupportProperties(...args) {
-    return supportProperties._renderSupportProperties.apply(this, args);
+    const result = supportProperties._renderSupportProperties.apply(this, args);
+    associateFieldLabels(args[0]);
+    return result;
   }
 
   refreshQuantitySummary({ force = false } = {}) {

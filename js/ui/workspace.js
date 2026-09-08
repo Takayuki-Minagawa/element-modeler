@@ -1,14 +1,19 @@
+import { initCoordinateInput } from './coordinate-input.js';
+import { initElementList } from './element-list.js';
 import { getLang, t } from '../i18n.js';
 import { placementContext } from './placement-context.js';
 import { initMenus } from './menus.js';
 import { initInspectorTabs, showInspector } from './inspector.js';
 
 // Connect workspace commands, dialogs and placement context.
-export function initWorkspace({ state, history, ui, toolManager, openRecovery }) {
+export function initWorkspace({ state, history, ui, toolManager, activatePlanInput, openRecovery }) {
   const header = document.getElementById('app-header');
   const drawButtons = [...document.querySelectorAll('[data-draw-tool]')];
   const historyButtons = [...document.querySelectorAll('[data-history]')];
   let selectionKey = '', contextKey = '';
+  const coordinates = initCoordinateInput({ state, toolManager, activatePlanInput });
+  const elements = initElementList({ state, ui, toolManager, activatePlanInput });
+  let summaryKey = '';
   initMenus(header, { onOpen: refresh });
   document.querySelectorAll('[data-trigger]').forEach(button => {
     button.addEventListener('click', () => document.getElementById(button.dataset.trigger)?.click());
@@ -46,6 +51,21 @@ export function initWorkspace({ state, history, ui, toolManager, openRecovery })
   });
   initInspectorTabs();
   function refresh() {
+    coordinates.refresh();
+    elements.refresh();
+    const selected = [...new Set([state.selectedMemberId, ...state.selectedMemberIds,
+      state.selectedSurfaceId, state.selectedLoadId, state.selectedSupportId].filter(Boolean))];
+    const summary = [getLang(), state.members.length, state.surfaces.length,
+      state.loads.length, state.supports.length, ...selected].join(':');
+    if (summary !== summaryKey) {
+      summaryKey = summary;
+      document.getElementById('model-summary').textContent = t('modelCounts', {
+        members: state.members.length, surfaces: state.surfaces.length,
+        loads: state.loads.length, supports: state.supports.length });
+      document.getElementById('model-summary').setAttribute('aria-label', t('modelSummary'));
+      document.getElementById('selection-summary').textContent = selected.length
+        ? t('selectionSummary', { ids: selected.join(', ') }) : t('noSelection');
+    }
     for (const button of historyButtons) {
       const disabled = history[button.dataset.history + 'Stack'].length === 0;
       if (button.disabled !== disabled) button.disabled = disabled;
@@ -74,8 +94,10 @@ export function initWorkspace({ state, history, ui, toolManager, openRecovery })
     document.getElementById('context-tool').textContent = t(type || ({ select: 'selectTool', measure: 'measureTool', splitPoint: 'toolSplitPoint' }[tool] || tool));
     document.getElementById('placement-guide').textContent = t(guide);
     document.getElementById('app-menubar').setAttribute('aria-label', t('mainMenu'));
+    document.getElementById('view-tabs').setAttribute('aria-label', t('menuView'));
     document.getElementById('canvas-2d').setAttribute('aria-label', t('planInput'));
     document.querySelector('.inspector-tabs').setAttribute('aria-label', t('modelInfo'));
+    document.getElementById('property-panel').setAttribute('aria-label', t('modelInfo'));
   }
   refresh();
   // Tool transactions can notify while still inside their mutation. Refresh

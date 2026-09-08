@@ -6,9 +6,10 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
-  <title>Element Modeler - Ver.1.3.1</title>
+  <title>Element Modeler - Ver.1.4.0</title>
+  <link rel="help" href="docs/coordinate-input.md" type="text/markdown">
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
-  <link rel="stylesheet" href="style.css?v=1.3.1">
+  <link rel="stylesheet" href="style.css?v=1.4.0">
 </head>
 <body>
 <header id="app-header">
@@ -43,6 +44,7 @@
 <button type="button" id="btn-open-user-def"><span data-i18n="userDefManage">ユーザー定義</span></button>
 <button type="button" id="btn-copy-level-open" data-i18n="copyLevelTitle">階コピー</button>
 <p class="menu-section" data-i18n="menuModelReview">モデルの確認</p>
+<button type="button" id="btn-element-list" data-i18n="elementListOpen">要素一覧…</button>
 <button type="button" id="btn-model-check" data-i18n="modelCheck">モデルチェック</button>
 <button type="button" data-inspector-open="quantities" data-i18n="quantitySummary">集計</button>
 </div></div>
@@ -72,10 +74,10 @@
 <div class="header-actions"><button type="button" data-trigger="btn-export" class="header-save" data-i18n="export">CAD保存</button><button type="button" id="btn-settings">&#9881; <span data-i18n="settings">設定</span></button></div>
 </header>
   <!-- Plan input -->
-<aside id="toolbar">
-<div class="input-heading"><h2 data-i18n="planInput">平面から部材を作成</h2><span class="unit-badge">mm</span></div>
+<aside id="toolbar" aria-labelledby="plan-input-title">
+<div class="input-heading"><h2 id="plan-input-title" data-i18n="planInput">平面から部材を作成</h2><span class="unit-badge">mm</span></div>
 <section id="toolbar-quick">
-<label for="sel-active-layer" class="step-label"><span class="step-number">1</span><span data-i18n="inputLevel">入力する階</span></label>
+<label for="sel-active-layer" class="step-label"><span class="step-number" aria-hidden="true">1</span><span data-i18n="inputLevel">入力する階</span></label>
 <div class="layer-controls"><select id="sel-active-layer"></select><button type="button" class="layer-manage-btn" data-trigger="btn-layer-manage" data-i18n="manage">管理</button></div>
 </section>
 <section class="input-section">
@@ -221,6 +223,22 @@
 
 </section>
 <div class="input-snap"><label class="toggle-label"><input type="checkbox" id="chk-snap" checked><span data-i18n="snap">スナップ</span></label></div>
+<details id="coordinate-input" class="input-aids coordinate-input">
+<summary data-i18n="coordinateInput">座標で入力</summary>
+<p id="coordinate-hint" class="tool-hint" data-i18n="coordinateHint"></p>
+<form id="coordinate-form" aria-describedby="coordinate-hint coordinate-state">
+<fieldset id="coordinate-fields"><legend class="sr-only" data-i18n="coordinateInput">座標で入力</legend>
+<div class="coordinate-fields">
+<label for="coordinate-x">X (mm)</label><input id="coordinate-x" type="number" step="any" min="-1000000000" max="1000000000" required value="0">
+<label for="coordinate-y">Y (mm)</label><input id="coordinate-y" type="number" step="any" min="-1000000000" max="1000000000" required value="0">
+</div>
+<button type="submit" id="btn-coordinate-add" data-i18n="coordinateAdd">この座標を入力</button>
+</fieldset>
+</form>
+<p id="coordinate-state" class="tool-hint" role="status"></p>
+<div class="coordinate-actions"><button type="button" id="btn-coordinate-finish" data-i18n="coordinateFinish">輪郭を確定</button><button type="button" id="btn-coordinate-cancel" data-i18n="coordinateCancel">未確定入力を取消</button></div>
+<p id="coordinate-result" class="tool-hint" role="status"></p>
+</details>
 <details class="input-aids"><summary data-i18n="inputAids">入力補助</summary>
 
 <label class="grid-label"><span data-i18n="grid">グリッド (mm)</span><input type="number" id="sel-grid" min="100" max="1000" step="1" value="1000"></label>
@@ -238,9 +256,9 @@
   <!-- Main Area -->
   <main id="main-area">
     <!-- View Tabs -->
-    <nav id="view-tabs">
-      <button id="tab-2d" class="tab-btn active" data-i18n="tab2d">2D CAD</button>
-      <button id="tab-3d" class="tab-btn" data-i18n="tab3d">3D 表示</button>
+    <nav id="view-tabs" aria-label="表示切替">
+      <button id="tab-2d" aria-pressed="true" class="tab-btn active" data-i18n="tab2d">2D CAD</button>
+      <button id="tab-3d" aria-pressed="false" class="tab-btn" data-i18n="tab3d">3D 表示</button>
       <button id="btn-elevation-open" class="tab-btn" data-i18n="elevationOpen">軸組図</button>
     </nav>
 
@@ -259,14 +277,15 @@
       <span id="status-zoom">Zoom: 100%</span>
       <span id="status-tool" data-i18n="toolMember">ツール: 線材</span>
       <div id="recovery-tools"></div>
-      <span id="status-version">Ver.1.3.1</span>
+      <span id="status-version">Ver.1.4.0</span>
     </footer>
   </main>
   <div id="property-resizer" class="side-resizer side-resizer-right" role="separator" aria-label="Resize properties" aria-orientation="vertical">
     <button id="btn-toggle-property" class="panel-toggle-btn" type="button" aria-label="Hide properties" title="プロパティパネルを隠す">›</button>
   </div>
 
-<aside id="property-panel">
+<aside id="property-panel" aria-label="モデル情報">
+<div class="model-context"><p id="model-summary" role="status"></p><p id="selection-summary" role="status"></p></div>
 <div class="inspector-tabs" role="tablist" aria-label="モデル情報">
 <button type="button" id="inspector-properties-tab" role="tab" aria-selected="true" aria-controls="inspector-properties" data-inspector-tab="properties" data-i18n="properties">プロパティ</button>
 <button type="button" id="inspector-quantities-tab" role="tab" aria-selected="false" tabindex="-1" aria-controls="inspector-quantities" data-inspector-tab="quantities" data-i18n="quantitySummary">集計</button>
@@ -399,11 +418,27 @@
 </fieldset></div>
 </dialog>
 
+<dialog id="element-list-dialog" class="workspace-dialog element-list-dialog" aria-labelledby="element-list-title" aria-describedby="element-list-hint">
+<div class="modal-header"><h2 id="element-list-title" data-i18n="elementList">要素一覧</h2><button type="button" class="modal-close" data-close-dialog="element-list-dialog" data-i18n="helpClose">閉じる</button></div>
+<div class="modal-body">
+<p id="element-list-hint" data-i18n="elementListHint"></p>
+<div class="element-filters">
+<label><span data-i18n="elementKind">要素の種類</span><select id="element-kind"><option value="all" data-i18n="filterAll">すべて</option><option value="member" data-i18n="member">線材</option><option value="surface" data-i18n="surface">面材</option><option value="load" data-i18n="load">荷重</option><option value="support" data-i18n="support">支点</option></select></label>
+<label><span data-i18n="elementLevel">階で絞り込み</span><select id="element-level"></select></label>
+<label><span data-i18n="elementSearch">ID・断面を検索</span><input type="search" id="element-search"></label>
+</div>
+<p id="element-list-count" role="status"></p>
+<div class="element-table-wrap"><table id="element-table"><caption class="sr-only" data-i18n="elementList">要素一覧</caption><thead><tr><th scope="col" data-i18n="elementId">要素ID</th><th scope="col" data-i18n="propType">種別</th><th scope="col" data-i18n="propLayer">階</th><th scope="col" data-i18n="propSection">断面</th><th scope="col" data-i18n="elementCoordinates">平面座標 (mm)</th></tr></thead><tbody id="element-rows"></tbody></table></div>
+<p id="element-list-empty" data-i18n="elementNoMatches" hidden></p>
+<div class="element-pagination"><button type="button" id="element-prev" data-i18n="previousPage">前へ</button><button type="button" id="element-next" data-i18n="nextPage">次へ</button></div>
+</div>
+</dialog>
+
   <!-- Help Modal -->
   <div id="help-modal" class="modal-overlay">
-    <div class="modal-content">
+    <div class="modal-content" role="dialog" aria-labelledby="help-modal-title">
       <div class="modal-header">
-        <h2 data-i18n="helpTitle">簡易マニュアル</h2>
+        <h2 id="help-modal-title" data-i18n="helpTitle">簡易マニュアル</h2>
         <button id="btn-help-close" class="modal-close" data-i18n="helpClose">閉じる</button>
       </div>
       <div id="help-body" class="modal-body"></div>
@@ -412,9 +447,9 @@
 
   <!-- Settings Modal -->
   <div id="settings-modal" class="modal-overlay">
-    <div class="modal-content modal-settings">
+    <div class="modal-content modal-settings" role="dialog" aria-labelledby="settings-modal-title">
       <div class="modal-header">
-        <h2 data-i18n="settingsTitle">設定</h2>
+        <h2 id="settings-modal-title" data-i18n="settingsTitle">設定</h2>
         <button id="btn-settings-close" class="modal-close" data-i18n="helpClose">閉じる</button>
       </div>
       <div class="modal-body">
@@ -538,9 +573,9 @@
 
   <!-- User Definition Modal -->
   <div id="user-def-modal" class="modal-overlay">
-    <div class="modal-content modal-settings">
+    <div class="modal-content modal-settings" role="dialog" aria-labelledby="user-def-modal-title">
       <div class="modal-header">
-        <h2 data-i18n="userDefTitle">ユーザー定義</h2>
+        <h2 id="user-def-modal-title" data-i18n="userDefTitle">ユーザー定義</h2>
         <button id="btn-user-def-close" class="modal-close" data-i18n="helpClose">閉じる</button>
       </div>
       <div class="modal-body">
@@ -726,9 +761,9 @@
 
   <!-- User Definition List Modal -->
   <div id="user-def-list-modal" class="modal-overlay">
-    <div class="modal-content modal-user-def-list">
+    <div class="modal-content modal-user-def-list" role="dialog" aria-labelledby="user-def-list-modal-title">
       <div class="modal-header">
-        <h2 data-i18n="userDefListTitle">同グループ定義一覧</h2>
+        <h2 id="user-def-list-modal-title" data-i18n="userDefListTitle">同グループ定義一覧</h2>
         <button id="btn-user-def-list-close" class="modal-close" data-i18n="helpClose">閉じる</button>
       </div>
       <div id="user-def-list-body" class="modal-body"></div>
@@ -737,9 +772,9 @@
 
   <!-- Analysis Export Settings Modal -->
   <div id="analysis-settings-modal" class="modal-overlay">
-    <div class="modal-content modal-settings">
+    <div class="modal-content modal-settings" role="dialog" aria-labelledby="analysis-settings-modal-title">
       <div class="modal-header">
-        <h2 data-i18n="analysisSettingsTitle">解析出力設定</h2>
+        <h2 id="analysis-settings-modal-title" data-i18n="analysisSettingsTitle">解析出力設定</h2>
         <button id="btn-analysis-settings-close" class="modal-close" data-i18n="choiceCancel">キャンセル</button>
       </div>
       <form id="analysis-settings-form" class="modal-body">
@@ -764,9 +799,9 @@
 
   <!-- Layer Management Modal -->
   <div id="layer-modal" class="modal-overlay">
-    <div class="modal-content modal-layer">
+    <div class="modal-content modal-layer" role="dialog" aria-labelledby="layer-modal-title">
       <div class="modal-header">
-        <h2 data-i18n="layerManage">レイヤー管理</h2>
+        <h2 id="layer-modal-title" data-i18n="layerManage">レイヤー管理</h2>
         <button id="btn-layer-close" class="modal-close" data-i18n="helpClose">閉じる</button>
       </div>
       <div class="modal-body">
@@ -779,9 +814,9 @@
 
   <!-- Grid Axes Modal -->
   <div id="axes-modal" class="modal-overlay">
-    <div class="modal-content modal-layer">
+    <div class="modal-content modal-layer" role="dialog" aria-labelledby="axes-modal-title">
       <div class="modal-header">
-        <h2 data-i18n="axesManage">通り芯管理</h2>
+        <h2 id="axes-modal-title" data-i18n="axesManage">通り芯管理</h2>
         <button id="btn-axes-close" class="modal-close" data-i18n="helpClose">閉じる</button>
       </div>
       <div class="modal-body">
@@ -796,9 +831,9 @@
 
   <!-- Load Combination Modal -->
   <div id="combo-modal" class="modal-overlay">
-    <div class="modal-content modal-combo">
+    <div class="modal-content modal-combo" role="dialog" aria-labelledby="combo-modal-title">
       <div class="modal-header">
-        <h2 data-i18n="comboManage">荷重組合せ</h2>
+        <h2 id="combo-modal-title" data-i18n="comboManage">荷重組合せ</h2>
         <button id="btn-combo-close" class="modal-close" data-i18n="helpClose">閉じる</button>
       </div>
       <div class="modal-body">
@@ -830,9 +865,9 @@
 
   <!-- Elevation (Frame) Modal -->
   <div id="elevation-modal" class="modal-overlay">
-    <div class="modal-content modal-elevation">
+    <div class="modal-content modal-elevation" role="dialog" aria-labelledby="elevation-modal-title">
       <div class="modal-header">
-        <h2 data-i18n="elevationTitle">軸組図</h2>
+        <h2 id="elevation-modal-title" data-i18n="elevationTitle">軸組図</h2>
         <button id="btn-elevation-close" class="modal-close" data-i18n="helpClose">閉じる</button>
       </div>
       <div class="modal-body">
@@ -854,6 +889,6 @@
     }
   }
   </script>
-  <script type="module" src="js/app.js?v=1.3.1"></script>
+  <script type="module" src="js/app.js?v=1.4.0"></script>
 </body>
 </html>

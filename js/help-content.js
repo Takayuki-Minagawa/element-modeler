@@ -15,6 +15,9 @@ export const helpContentJa = `
 <p>左パネルの「1 入力する階」→「2 作成する部材」→「3 配置条件」の順に設定し、平面図をクリックして部材を作成します。梁・柱・床・壁などのボタンで直接切り替えられます。種類ごとの配置方法は配置条件の先頭に表示されます。入力ボタン・ツール選択・ショートカットのいずれでも、3Dから平面入力へ戻ります。</p>
 <p>保存・読込は「ファイル」、元に戻す・接続整理は「編集」、初期モデル生成・階・通り芯・断面定義・階コピーは「モデル」、表示フィルタは「表示 → 表示設定」、解析出力・結果読込は「解析」から操作します。サンプルとマニュアルは「ヘルプ」にあります。</p>
 <p>右パネルは「プロパティ / 集計 / チェック」を切り替えます。部材を選択するとプロパティが開き、モデルチェックの結果はチェックに表示されます。パネル境界の矢印で折り畳むと平面図を広く使えます。メニューは矢印キーでも移動でき、Escで閉じます。</p>
+<h3>座標入力と要素一覧</h3>
+<p>「座標で入力」を開き、X・Yをmmで指定して「この座標を入力」を押します。未確定点数と最後の座標を文字で確認できます。ポリラインは「輪郭を確定」で閉じ、途中の入力は取消ボタンで解除します。右パネルには要素数と選択IDを表示します。</p>
+<p>「モデル → 要素一覧」でID・断面・階・種類から探して選択すると、平面図とプロパティを開きます。非表示の要素も含み、必要な表示フィルタは解除されます。<a href="docs/coordinate-input.md" target="_blank" rel="noopener">座標入力と要素一覧の詳しい使い方</a></p>
 <h3>基本操作</h3>
 <table>
   <tr><td><b>線材作成</b></td><td>「線材」ツール(Mキー)を選択し、キャンバス上で始点をクリック → 終点をクリック</td></tr>
@@ -169,6 +172,9 @@ export const helpContentEn = `
 <p>Choose the input level, choose an element, then set its placement options on the left. Click in plan to create it. The beam, column, floor and wall buttons switch tools directly; the placement guide explains each tool.</p>
 <p>Use File for saving and importing, Edit for history and connections, Model for frame generation, levels, axes, definitions and level copying, View → Display settings for display filters, and Analysis for exports and results. Samples and this manual are in Help.</p>
 <p>The right panel has Properties, Quantities and Checks tabs. Selection opens Properties; diagnostics open Checks. Collapse or resize either panel to make more room for the plan. Menus support arrow keys and close with Escape.</p>
+<h3>Coordinate input and element list</h3>
+<p>Expand Coordinate input and enter X/Y in mm using Enter this point. Pending points, the last coordinate, model counts and selection IDs are readable text. Use Finish outline for polygons and Cancel pending input to discard unfinished points.</p>
+<p>Model → Element list lets you search by ID or section and filter by level or kind. Select an ID to open its plan and Properties; hidden elements are included and necessary visibility filters are cleared. <a href="docs/coordinate-input.md" target="_blank" rel="noopener">Coordinate input and element list guide</a></p>
 <h3>Basic Operations</h3>
 <table>
   <tr><td><b>Create line</b></td><td>Select "Line" tool (M key), click start point → click end point</td></tr>
