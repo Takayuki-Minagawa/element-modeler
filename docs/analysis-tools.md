@@ -151,8 +151,9 @@ My(s) = -My_I - s·Qz_I,  Mz(s) = -Mz_I + s·Qy_I
 ```
 
 J端の値は節点 J が要素へ与える材端力と一致します。引張正、モーメントは局所軸まわりの右手則です。
-水平梁（local z = global Z）では下側引張の曲げが負の My になり、応力図は局所 +y（Qy, Mz）または +z（N, Qz, T, My）を正側に描くため、
-My は引張側に表示されます。表示面に直交する成分は部材線上に重なります。
+応力図は局所 +y（Qy）、−y（Mz）、+z（N, Qz, T, My）を正側に描きます。右手則では +My の引張側が局所 +z、+Mz の引張側が局所 −y なので、
+曲げモーメントは引張側に表示されます。表示面に直交する成分は部材線上に重なります。
+成分の最大絶対値が絶対下限（力 1e-6 N、モーメント 1e-3 N·mm）以下、または同じ単位の最大成分の 1e-6 倍以下のときは数値誤差とみなし、図を描きません。
 「材端力CSVを出力」は `member-forces-<case>.csv` に load_case・要素・sourceId/branch・節点・長さ・両端の断面力を書き出します。
 
 ### CLIと失敗時の扱い
@@ -247,7 +248,7 @@ import { validateAnalysisResult, buildResultView } from './js/analysis/results.j
 const resultPanel = await mountResultsPanel(container, analysisModel, resultJSON, {
   language: 'ja', scale: 50, plane: 'xz', component: 'My', // 'none' | 'N' | 'Qy' | 'Qz' | 'T' | 'My' | 'Mz'
   onSelect: ({ elementId, sourceId, sourceBranch }) => selectCadMember(sourceId),
-  onExportForces: (csv, loadCase) => download(`member-forces-${loadCase}.csv`, csv), // 省略時はボタン非表示
+  onExportForces: (csv, loadCase) => saveTextFile(`member-forces-${loadCase}.csv`, csv), // 任意の保存関数。省略時はボタン非表示
 });
 // CAD変更時に呼ぶ。workbenchは非同期読込中のモデル変更もfingerprintで再確認する。
 resultPanel.invalidate();

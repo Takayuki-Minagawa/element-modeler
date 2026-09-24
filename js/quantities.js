@@ -6,6 +6,7 @@ import { finiteNumber, signedArea2 } from './geometry-utils.js';
 import { roofActualAreaM2, roofProjectionAreasM2 } from './roof-geometry.js';
 import { sectionProperties } from './section-catalog.js';
 import { isGableWallSurfaceType, isSlopedSurfaceType, isWallSurfaceType } from './state.js';
+import { braceDiagonals } from './view-semantics.js';
 
 export function resolveSurfaceVerticalRange(state, surface) {
   const baseZ = state.getLevelZ(surface.levelId);
@@ -128,6 +129,9 @@ function optionalPositive(value) {
  * weight from material density x section area. Rows without a resolvable
  * section area or material density report weight null instead of 0 so the
  * totals never silently omit members. Weight = density [kg/m3] x A [mm2] / 1e6 x L [m].
+ * A cross (X) vertical brace is one CAD member but two physical diagonals, so
+ * it counts as two pieces with twice the diagonal length, matching the 2D/3D
+ * drawing and the analysis export.
  */
 export function computeMemberSchedule(state) {
   const groups = new Map();
@@ -141,7 +145,8 @@ export function computeMemberSchedule(state) {
     const materialName = section?.material || '';
     const density = optionalPositive(materialName ? state.getMaterial(materialName)?.density : null);
     const unitWeightKgPerM = areaMm2 !== null && density !== null ? areaMm2 / MM2_PER_M2 * density : null;
-    const lengthM = computeMemberLengthM(state, member);
+    const pieces = type === 'vbrace' ? braceDiagonals(member.bracePattern).length : 1;
+    const lengthM = computeMemberLengthM(state, member) * pieces;
     const weightKg = unitWeightKgPerM === null ? null : unitWeightKgPerM * lengthM;
     const key = `${type}\u0000${sectionName}`;
     if (!groups.has(key)) {
@@ -151,12 +156,12 @@ export function computeMemberSchedule(state) {
       });
     }
     const group = groups.get(key);
-    group.count += 1;
+    group.count += pieces;
     group.lengthM += lengthM;
     if (group.weightKg !== null) group.weightKg += weightKg;
     members.push({
       id: member.id || '', type, sectionName, levelId: member.levelId || '', roofRole: member.roofRole || '',
-      lengthM, weightKg,
+      pieces, lengthM, weightKg,
     });
   }
   const typeIndex = type => {
@@ -173,7 +178,7 @@ export function computeMemberSchedule(state) {
     rows,
     members,
     totals: {
-      count: members.length,
+      count: members.reduce((sum, row) => sum + row.pieces, 0),
       lengthM: rows.reduce((sum, row) => sum + row.lengthM, 0),
       weightKg: rows.reduce((sum, row) => sum + (row.weightKg ?? 0), 0),
       unknownWeightCount,
@@ -187,12 +192,13 @@ export function computeMemberLengthM(state, member) {
   if (!startNode || !endNode) return 0;
   const dx = finiteNumber(endNode.x, 0) - finiteNumber(startNode.x, 0);
   const dy = finiteNumber(endNode.y, 0) - finiteNumber(startNode.y, 0);
-  return Math.hypot(dx, dy, memberEndZ(state, member, 'end') - memberEndZ(state, member, 'start')) / 1000;
+  return Math.hypot(dx, dy, resolveMemberEndZ(state, member, 'end') - resolveMemberEndZ(state, member, 'start')) / 1000;
 }
 
 // Columns and vertical braces span from levelId to topLevelId; other members
-// sit on their level unless they carry explicit 3D end elevations.
-function memberEndZ(state, member, which) {
+// sit on their level unless they carry explicit 3D end elevations. Shared with
+// the analysis export so quantities and analysis geometry cannot drift apart.
+export function resolveMemberEndZ(state, member, which) {
   if (member.type === 'column' || member.type === 'vbrace') {
     return which === 'start'
       ? state.getLevelZ(member.levelId)

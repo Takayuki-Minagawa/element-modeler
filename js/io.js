@@ -165,6 +165,7 @@ export function exportQuantityDetailCSV(state) {
  */
 export function buildMemberScheduleCSV(state) {
   const schedule = computeMemberSchedule(state);
+  const cell = value => (value === null ? '' : formatCsvNumber(value)); // unknown weights stay blank, never 0
   const rows = [
     ['section', 'type', 'section_name', 'material', 'area_mm2', 'density_kg_m3', 'unit_weight_kg_m',
       'count', 'length_m', 'weight_kg', 'id', 'level', 'roof_role'],
@@ -172,8 +173,8 @@ export function buildMemberScheduleCSV(state) {
   for (const row of schedule.rows) {
     rows.push([
       'schedule', row.type, row.sectionName, row.material,
-      formatCsvNumber(row.areaMm2), formatCsvNumber(row.density), formatCsvNumber(row.unitWeightKgPerM),
-      String(row.count), formatCsvNumber(row.lengthM), formatCsvNumber(row.weightKg), '', '', '',
+      cell(row.areaMm2), cell(row.density), cell(row.unitWeightKgPerM),
+      String(row.count), formatCsvNumber(row.lengthM), cell(row.weightKg), '', '', '',
     ]);
   }
   rows.push([
@@ -184,7 +185,7 @@ export function buildMemberScheduleCSV(state) {
   for (const row of schedule.members) {
     rows.push([
       'member', row.type, row.sectionName, '', '', '', '', '',
-      formatCsvNumber(row.lengthM), formatCsvNumber(row.weightKg), row.id, row.levelId, row.roofRole,
+      formatCsvNumber(row.lengthM), cell(row.weightKg), row.id, row.levelId, row.roofRole,
     ]);
   }
   return `${rows.map(row => row.map(csvCell).join(',')).join('\r\n')}\r\n`;

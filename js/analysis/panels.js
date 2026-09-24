@@ -18,8 +18,8 @@ const messages = {
     gravity: 'Density self-weight explicitly omitted; this is a load-only analysis.',
     component: 'Force diagram', forces: 'Section forces (I end → J end)', exportForces: 'Export member forces CSV',
     forcesExported: 'Member forces CSV exported.',
-    convention: 'Section forces are derived from the end forces the nodes apply to each element. Tension positive; moments follow the right-hand rule about the local axis. Positive ordinates are drawn toward local +y (Qy, Mz) or local +z (N, Qz, T, My); components normal to the projection plane collapse onto the member line.',
-    diagram: 'Diagram', maxAbs: 'max |value|',
+    convention: 'Section forces are derived from the end forces the nodes apply to each element. Tension positive; moments follow the right-hand rule about the local axis. Positive ordinates are drawn toward local +y (Qy), local -y (Mz) or local +z (N, Qz, T, My), so My and Mz appear on the tension side; components normal to the projection plane collapse onto the member line.',
+    diagram: 'Diagram', maxAbs: 'max |value|', negligible: 'Values are numerical noise; no diagram is drawn.',
   },
   ja: {
     results: '線形静的解析結果', preview: '荷重配分プレビュー', select: '選択', node: '節点', member: '部材 / 枝番',
@@ -35,8 +35,8 @@ const messages = {
     gravity: '密度からの自重を明示的に省略しています。指定した節点荷重のみの解析です。',
     component: '応力図', forces: '断面力（I端 → J端）', exportForces: '材端力CSVを出力',
     forcesExported: '材端力CSVを出力しました。',
-    convention: '断面力は節点が要素へ与える材端力から算出します。引張正、モーメントは局所軸まわりの右手則。図の正側は局所+y（Qy, Mz）または局所+z（N, Qz, T, My）で、表示面に直交する成分は部材線上に重なります。',
-    diagram: '応力図', maxAbs: '最大絶対値',
+    convention: '断面力は節点が要素へ与える材端力から算出します。引張正、モーメントは局所軸まわりの右手則。図の正側は局所+y（Qy）、局所−y（Mz）、局所+z（N, Qz, T, My）で、My・Mz は引張側に描きます。表示面に直交する成分は部材線上に重なります。',
+    diagram: '応力図', maxAbs: '最大絶対値', negligible: '数値誤差程度の大きさのため図は描きません。',
   },
 };
 function element(doc, tag, text) {
@@ -92,20 +92,37 @@ function drawing(doc, paths, plane, shapes = []) {
   return svg;
 }
 
+const FORCE_UNIT_GROUPS = [['N', 'Qy', 'Qz'], ['T', 'My', 'Mz']];
+const NOISE_FLOOR = { N: 1e-6, Qy: 1e-6, Qz: 1e-6, T: 1e-3, My: 1e-3, Mz: 1e-3 };
+/** Solver round-off (e.g. out-of-plane torsion in a planar frame) must not be drawn at full size. */
+export function isSignificantComponent(extremes, component) {
+  const extreme = extremes[component];
+  if (!(extreme > NOISE_FLOOR[component])) return false;
+  const peers = FORCE_UNIT_GROUPS.find(group => group.includes(component));
+  const largest = Math.max(...peers.map(c => extremes[c]));
+  return extreme > 1e-6 * largest;
+}
+
 /** One quadrilateral per member: the member line plus ordinates along local +y (Qy, Mz) or +z (others),
  * scaled so the largest ordinate spans a fixed fraction of the model extent. */
 export function forceDiagramShapes(view, component, { fraction = 0.15 } = {}) {
+  if (!isSignificantComponent(view.extremes, component)) return [];
   const extreme = view.extremes[component];
-  if (!extreme) return [];
-  const bounds = [0, 1, 2].map(axis => {
-    const coordinates = view.members.flatMap(m => m.original.map(p => p[axis]));
-    return Math.max(...coordinates) - Math.min(...coordinates);
-  });
-  const extent = Math.max(...bounds, ...view.members.map(m => m.axes.length));
+  const low = [Infinity, Infinity, Infinity], high = [-Infinity, -Infinity, -Infinity];
+  let extent = 0;
+  for (const m of view.members) {
+    extent = Math.max(extent, m.axes.length);
+    for (const p of m.original) for (let axis = 0; axis < 3; axis++) {
+      low[axis] = Math.min(low[axis], p[axis]); high[axis] = Math.max(high[axis], p[axis]);
+    }
+  }
+  for (let axis = 0; axis < 3; axis++) extent = Math.max(extent, high[axis] - low[axis]);
   const factor = fraction * extent / extreme;
   const color = { N: '#d9534f', Qy: '#5cb85c', Qz: '#5cb85c', T: '#8e44ad', My: '#f0ad4e', Mz: '#f0ad4e' }[component];
   return view.members.map(m => {
-    const direction = component === 'Qy' || component === 'Mz' ? m.axes.y : m.axes.z;
+    // Moments are drawn on the tension side: +My (right-hand rule) puts tension
+    // at local +z, +Mz puts tension at local -y.
+    const direction = component === 'Qy' ? m.axes.y : component === 'Mz' ? m.axes.y.map(v => -v) : m.axes.z;
     const [vi, vj] = m.forces[component];
     const offset = (point, value) => point.map((coordinate, k) => coordinate + direction[k]*value*factor);
     return { points: [m.original[0], offset(m.original[0], vi), offset(m.original[1], vj), m.original[1]], color,
@@ -133,7 +150,8 @@ export async function mountResultsPanel(container, model, result, { scale = 1, p
   root.append(plot);
   if (component !== 'none') {
     const unit = component === 'N' || component.startsWith('Q') ? 'N' : 'N·mm';
-    root.append(element(doc, 'p', `${t.diagram}: ${component} [${unit}]; ${t.maxAbs} ${Number(view.extremes[component].toPrecision(6))}. ${t.convention}`));
+    const note = shapes.length ? '' : ` ${t.negligible}`;
+    root.append(element(doc, 'p', `${t.diagram}: ${component} [${unit}]; ${t.maxAbs} ${Number(view.extremes[component].toPrecision(6))}.${note} ${t.convention}`));
   }
   root.append(table(doc, [t.node, 'ux, uy, uz [mm]; rx, ry, rz [rad]', 'Fx, Fy, Fz [N]; Mx, My, Mz [N·mm]'],
     view.nodes.map(n => [n.id, values(n.displacement), values(n.reaction)])));

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { modelFingerprint } from '../js/analysis/fingerprint.js';
 import { FORCE_COMPONENTS, buildMemberForceCSV, buildResultView, memberInternalForces, validateAnalysisResult } from '../js/analysis/results.js';
-import { forceDiagramShapes, mountResultsPanel, mountLoadPreview } from '../js/analysis/panels.js';
+import { forceDiagramShapes, isSignificantComponent, mountResultsPanel, mountLoadPreview } from '../js/analysis/panels.js';
 import { previewLineLoad } from '../js/analysis/load-distribution.js';
 
 const fixture = name => JSON.parse(readFileSync(new URL(`./fixtures/analysis/${name}.json`, import.meta.url)));
@@ -141,6 +141,28 @@ test('force diagram draws ordinates on the tension side and scales to the model 
   assert.deepEqual(forceDiagramShapes(view, 'N'), []);
   const [shear] = forceDiagramShapes(view, 'Qz');
   assert.equal(shear.points[1][2], -0.15*3000); assert.equal(shear.points[2][2], -0.15*3000);
+  // +Mz has tension at local -y, so a positive Mz ordinate points toward -y.
+  view.members[0].forces.Mz = [2000000, 0]; view.extremes.Mz = 2000000;
+  const [mz] = forceDiagramShapes(view, 'Mz');
+  assert.equal(mz.points[1][1], -0.15*3000); assert.equal(mz.points[1][2], 0);
+  view.members[0].forces.Qy = [-500, -500]; view.extremes.Qy = 500;
+  assert.equal(forceDiagramShapes(view, 'Qy')[0].points[1][1], -0.15*3000);
+});
+
+test('solver round-off components are reported as noise instead of being drawn at full size', async () => {
+  const view = await buildResultView(model(), result());
+  // The fixture carries My_j = 2.3e-10 and the derived Mz/T are exactly zero.
+  assert.equal(isSignificantComponent(view.extremes, 'My'), true);
+  assert.equal(isSignificantComponent({ N: 0, Qy: 0, Qz: 1000, T: 2e-10, My: 3e6, Mz: 1e-9 }, 'T'), false);
+  assert.equal(isSignificantComponent({ N: 0, Qy: 0, Qz: 1000, T: 2e-10, My: 3e6, Mz: 1e-9 }, 'Mz'), false);
+  assert.equal(isSignificantComponent({ N: 5e-7, Qy: 0, Qz: 0, T: 0, My: 0, Mz: 0 }, 'N'), false);
+  assert.equal(isSignificantComponent({ N: 0, Qy: 0, Qz: 1000, T: 0, My: 3e6, Mz: 10 }, 'Mz'), true);
+  view.extremes.T = 2e-10; view.members[0].forces.T = [2e-10, 2e-10];
+  assert.deepEqual(forceDiagramShapes(view, 'T'), []);
+  const root = container();
+  await mountResultsPanel(root, model(), result(), { language: 'en', component: 'T' });
+  assert.equal(root.find('polygon').length, 0);
+  assert.match(root.textContent, /Diagram: T \[N·mm\]; max \|value\| 0\. Values are numerical noise/);
 });
 
 test('result panel renders the chosen diagram, the section force table and exports CSV', async () => {

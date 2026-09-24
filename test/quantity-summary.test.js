@@ -1202,7 +1202,25 @@ test('member schedule groups line members by type and section with density-based
   assert.ok(Math.abs(schedule.totals.weightKg - (115.2 + steelColumn.weightKg)) < 1e-9);
   assert.equal(schedule.members.length, 4);
   assert.equal(schedule.members.find(row => row.sectionName === 'NoMaterial').weightKg, null);
+  assert.ok(schedule.members.every(row => row.pieces === 1));
   assert.deepEqual(computeMemberSchedule(new AppState()), {
     rows: [], members: [], totals: { count: 0, lengthM: 0, weightKg: 0, unknownWeightCount: 0 },
   });
+});
+
+test('member schedule counts a cross vertical brace as two diagonals', () => {
+  const state = new AppState();
+  const n1 = state.addNode(0, 0);
+  const n2 = state.addNode(4000, 0);
+  state.addMember(n1.id, n2.id, { type: 'vbrace', levelId: 'L0', topLevelId: 'L1', bracePattern: 'single' });
+  state.addMember(n1.id, n2.id, { type: 'vbrace', levelId: 'L0', topLevelId: 'L1', bracePattern: 'cross' });
+  const diagonalM = Math.hypot(4, 2.8);
+  const schedule = computeMemberSchedule(state);
+  assert.equal(schedule.rows.length, 1);
+  assert.equal(schedule.rows[0].count, 3);
+  assert.ok(Math.abs(schedule.rows[0].lengthM - 3*diagonalM) < 1e-9);
+  assert.deepEqual(schedule.members.map(row => row.pieces), [1, 2]);
+  assert.ok(Math.abs(schedule.members[1].lengthM - 2*diagonalM) < 1e-9);
+  assert.equal(schedule.totals.count, 3);
+  assert.ok(Math.abs(schedule.totals.weightKg - 3*diagonalM*20*20/1e6*7850) < 1e-9);
 });

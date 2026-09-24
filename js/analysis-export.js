@@ -6,6 +6,7 @@
 // values (N/m, N/m², N·m) are converted here.
 
 import { normalizeAnalysisSettings } from './analysis-settings.js';
+import { resolveMemberEndZ } from './quantities.js';
 import { APP_VERSION, LOAD_CASES } from './constants.js';
 import {
   normalizeSectionShape,
@@ -69,18 +70,7 @@ function createNodePool(tolerance) {
   };
 }
 
-function memberEndZ(state, member, which) {
-  if (member.type === 'column' || member.type === 'vbrace') {
-    return which === 'start'
-      ? state.getLevelZ(member.levelId)
-      : state.getLevelZ(member.topLevelId || member.levelId);
-  }
-  if (member.geometryMode === 'explicit3d') {
-    const value = Number(which === 'start' ? member.startZ : member.endZ);
-    if (Number.isFinite(value)) return value;
-  }
-  return state.getLevelZ(member.levelId);
-}
+const memberEndZ = resolveMemberEndZ;
 
 function cloneEnd(end) {
   return {
