@@ -1223,4 +1223,7 @@ test('member schedule counts a cross vertical brace as two diagonals', () => {
   assert.ok(Math.abs(schedule.members[1].lengthM - 2*diagonalM) < 1e-9);
   assert.equal(schedule.totals.count, 3);
   assert.ok(Math.abs(schedule.totals.weightKg - 3*diagonalM*20*20/1e6*7850) < 1e-9);
+  state.addSection({ target: 'member', type: 'vbrace', name: 'NoDensity', material: 'missing', b: 20, h: 20 });
+  state.addMember(n1.id, n2.id, { type: 'vbrace', levelId: 'L0', topLevelId: 'L1', bracePattern: 'cross', sectionName: 'NoDensity' });
+  assert.equal(computeMemberSchedule(state).totals.unknownWeightCount, 2);
 });

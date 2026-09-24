@@ -86,7 +86,7 @@ export function initAnalysisWorkbench({ state, host, onSelect = () => {} }) {
   };
   const download = model => downloadFile('distributed-analysis.json', [JSON.stringify(model, null, 2)], 'application/json');
   const downloadForces = (csv, loadCase) =>
-    downloadFile(`member-forces-${String(loadCase).replace(/[^\w.-]+/g, '_')}.csv`, ['\ufeff', csv], 'text/csv;charset=utf-8');
+    downloadFile(`member-forces-${String(loadCase).replace(/[^\p{L}\p{N}.-]+/gu, '_')}.csv`, ['\ufeff', csv], 'text/csv;charset=utf-8');
   const selectControl = (label, options, id) => {
     const wrapper = make('label', controls, label);
     const select = make('select', wrapper); select.id = id;

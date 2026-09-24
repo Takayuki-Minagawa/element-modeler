@@ -173,7 +173,7 @@ export function computeMemberSchedule(state) {
     a.type.localeCompare(b.type) ||
     a.sectionName.localeCompare(b.sectionName)
   ));
-  const unknownWeightCount = members.filter(row => row.weightKg === null).length;
+  const unknownWeightCount = members.reduce((sum, row) => sum + (row.weightKg === null ? row.pieces : 0), 0);
   return {
     rows,
     members,
