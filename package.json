@@ -1,6 +1,6 @@
 {
   "name": "lineframe-cad",
-  "version": "1.4.0",
+  "version": "1.5.0",
   "private": true,
   "type": "module",
   "description": "2D CAD + 3D Viewer for structural frame layout",

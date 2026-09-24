@@ -2,8 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { modelFingerprint } from '../js/analysis/fingerprint.js';
-import { buildResultView, validateAnalysisResult } from '../js/analysis/results.js';
-import { mountResultsPanel, mountLoadPreview } from '../js/analysis/panels.js';
+import { FORCE_COMPONENTS, buildMemberForceCSV, buildResultView, memberInternalForces, validateAnalysisResult } from '../js/analysis/results.js';
+import { forceDiagramShapes, mountResultsPanel, mountLoadPreview } from '../js/analysis/panels.js';
 import { previewLineLoad } from '../js/analysis/load-distribution.js';
 
 const fixture = name => JSON.parse(readFileSync(new URL(`./fixtures/analysis/${name}.json`, import.meta.url)));
@@ -98,4 +98,69 @@ test('SVG engineering projection uses one physical scale in both directions', ()
   mountLoadPreview(root, preview);
   const [[x0, y0], [x1, y1]] = root.find('polyline')[0].attributes.points.split(' ').map(p => p.split(',').map(Number));
   assert.equal(Math.abs(x1-x0), Math.abs(y1-y0));
+});
+
+test('section forces follow the cantilever solution and agree with the J-end forces', async () => {
+  const view = await buildResultView(model(), result(), { segments: 2 });
+  const [member] = view.members;
+  const near = (a, b, tolerance = 1e-6) => assert.ok(Math.abs(a-b) < tolerance, `${a} vs ${b}`);
+  near(member.forces.My[0], 3000000); near(member.forces.My[1], 0);
+  near(member.forces.Qz[0], -1000); near(member.forces.Qz[1], -1000);
+  for (const c of ['N', 'Qy', 'T', 'Mz']) assert.deepEqual(member.forces[c], [0, 0]);
+  // The section force at the J end equals the force node J applies to the element.
+  FORCE_COMPONENTS.forEach((c, index) => near(member.forces[c][1], member.endForces[6+index]));
+  assert.deepEqual(member.axes.x, [1, 0, 0]); assert.equal(member.nodeI, 1); assert.equal(member.nodeJ, 2);
+  near(view.extremes.My, 3000000); near(view.extremes.Qz, 1000); assert.equal(view.extremes.N, 0);
+  assert.throws(() => memberInternalForces([1, 2, 3], 100), /12 finite/);
+  assert.throws(() => memberInternalForces(Array(12).fill(0), 0), /positive/);
+  const inclined = memberInternalForces([-10, 20, 30, -40, 50, -60, 10, -20, -30, 40, 0, 0], 2000);
+  assert.deepEqual(inclined.N, [10, 10]); assert.deepEqual(inclined.Qy, [-20, -20]); assert.deepEqual(inclined.T, [40, 40]);
+  assert.deepEqual(inclined.My, [-50, -50-2000*30]); assert.deepEqual(inclined.Mz, [60, 60+2000*20]);
+  assert.ok(!Object.is(inclined.N[0], -0));
+});
+
+test('member force CSV lists both ends per element with units in the header', async () => {
+  const csv = buildMemberForceCSV(await buildResultView(model(), result()));
+  const [header, row, tail] = csv.split('\r\n');
+  assert.equal(header, 'load_case,element,source_id,source_branch,node_i,node_j,length_mm,' +
+    'N_i_N,Qy_i_N,Qz_i_N,T_i_Nmm,My_i_Nmm,Mz_i_Nmm,N_j_N,Qy_j_N,Qz_j_N,T_j_Nmm,My_j_Nmm,Mz_j_Nmm');
+  const cells = row.split(',');
+  assert.deepEqual(cells.slice(0, 7), ['LL', '1', 'DEMO-B1', 'primary', '1', '2', '3000']);
+  assert.equal(Number(cells[9]), -1000); assert.equal(Number(cells[11]), 3000000);
+  assert.ok(Math.abs(Number(cells[16])) < 1e-6); assert.equal(tail, '');
+});
+
+test('force diagram draws ordinates on the tension side and scales to the model extent', async () => {
+  const view = await buildResultView(model(), result());
+  const [shape] = forceDiagramShapes(view, 'My');
+  assert.equal(shape.points.length, 4);
+  // Hogging moment at the fixed end is positive and drawn toward local +z (above the beam).
+  assert.equal(shape.points[1][2], 0.15*3000); assert.ok(Math.abs(shape.points[2][2]) < 1e-6);
+  assert.deepEqual(shape.points[0], [0, 0, 0]); assert.deepEqual(shape.points[3], [3000, 0, 0]);
+  assert.match(shape.label, /My: 3000000 → /);
+  assert.deepEqual(forceDiagramShapes(view, 'N'), []);
+  const [shear] = forceDiagramShapes(view, 'Qz');
+  assert.equal(shear.points[1][2], -0.15*3000); assert.equal(shear.points[2][2], -0.15*3000);
+});
+
+test('result panel renders the chosen diagram, the section force table and exports CSV', async () => {
+  const root = container(), exported = [];
+  const panel = await mountResultsPanel(root, model(), result(), { language: 'ja', component: 'My', onExportForces: (csv, loadCase) => exported.push([csv, loadCase]) });
+  assert.equal(root.find('polygon').length, 1);
+  assert.match(root.find('polygon')[0].attributes.class, /force-diagram/);
+  assert.match(root.textContent, /応力図: My \[N·mm\]; 最大絶対値 3000000/);
+  assert.match(root.textContent, /断面力（I端 → J端）/);
+  const forceTable = root.find('table')[1];
+  assert.match(forceTable.textContent, /DEMO-B1\/primary \(1\)/);
+  assert.match(forceTable.textContent, /3\.00000e\+6/);
+  const button = root.find('button').find(n => n.textContent === '材端力CSVを出力');
+  button.listeners.get('click')();
+  assert.equal(exported.length, 1); assert.equal(exported[0][1], 'LL'); assert.match(exported[0][0], /^load_case,element/);
+  assert.match(root.textContent, /材端力CSVを出力しました/);
+  panel.dispose();
+  const plain = container();
+  await mountResultsPanel(plain, model(), result(), { language: 'en' });
+  assert.equal(plain.find('polygon').length, 0);
+  assert.equal(plain.find('button').some(n => /Export member forces/.test(n.textContent)), false);
+  await assert.rejects(mountResultsPanel(container(), model(), result(), { component: 'Mx' }), /Unknown force component/);
 });

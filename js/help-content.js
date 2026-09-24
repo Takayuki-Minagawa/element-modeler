@@ -9,6 +9,7 @@ export const helpContentJa = `
 <p>3Dタブの「3D表示・出力」で切断軸X/Y/Zを選び、位置スライダと反転で内部を確認します。軸を解除すると戻ります。「選択を単独表示」「単独表示を解除」「選択へ移動」で対象を確認できます。表示操作でCADの幾何は変わりません。GLBは表示対象をm単位で保存し、切断面は開いたままです。</p>
 <h3>解析結果・荷重配分</h3>
 <p>「解析結果・荷重配分」から、同じCADモデルを外部OpenSeesPyで解析した結果JSONを読み込みます。表示面と変形倍率を指定し、変位・反力を確認できます。モデルが変わった結果は再読込・再解析が必要です。</p>
+<p>「応力図」で N / Qy / Qz / T / My / Mz を選ぶと、変形図と同じ投影で部材ごとの断面力を塗り図形として重ね、要素ごとの I端・J端の断面力表を表示します。引張正、モーメントは局所軸まわりの右手則で、正値は局所 +y（Qy, Mz）または +z（N, Qz, T, My）側に描きます（水平梁の My は引張側に描かれます）。「材端力CSVを出力」で荷重ケース・要素・両端の断面力を CSV に保存できます。</p>
 <p>線荷重は作用部材、矩形面荷重は一方向スパンと支持辺2本を明示して配分を確認します。合力・モーメントは保存しますが、端点への集中化は分布荷重の部材内曲げを再現しません。制限を確認して配分済み解析JSONを保存し、解析後は同じJSONを任意の参照モデルとして読み込んでから結果を開きます。</p>
 <p>解析は両端rigidの線形線材と節点荷重が対象です。IFCは柱・梁・階・3種の断面の限定出力です。実行手順と対応範囲は <a href="docs/analysis-tools.md" target="_blank" rel="noopener">解析・IFCツール</a>を参照してください。</p>
 <h3>平面入力を中心にした画面</h3>
@@ -152,6 +153,7 @@ export const helpContentJa = `
   <tr><td><b>CAD読込</b></td><td>ファイルメニューの「CAD読込」でJSONファイルを読み込み。既にメモリ上にあるカスタム定義は維持されます</td></tr>
   <tr><td><b>定義エクスポート</b></td><td>モデル → ユーザー定義 →「エクスポート」でカスタム定義を別ファイルに保存</td></tr>
   <tr><td><b>定義インポート</b></td><td>モデル → ユーザー定義 →「インポート」で別環境のカスタム定義を読み込み。CADファイルから読込済みの定義を含め、同名の定義はスキップされます</td></tr>
+  <tr><td><b>部材リストCSV</b></td><td>ファイル → 集計 →「部材リストCSV出力」で、線材を種別・断面ごとに本数・延長・単位重量（材料密度 × 断面積）・重量に集計した行と、部材ごとの明細行を出力。右パネルの集計にも同じ「部材リスト」表を表示します。断面積または密度が未設定の部材は重量が空欄になります</td></tr>
 </table>
 <p>定義インポート時、追加件数とスキップ件数が通知されます。断面定義・バネ定義にはメモ（説明テキスト）を付与できます。</p>
 <p>ノード・部材・面材・荷重・支点IDはCADファイルに保存され、読込後も保持されます。旧バージョンで保存されたファイルも読み込めます。</p>
@@ -166,6 +168,7 @@ export const helpContentEn = `
 <p>On the 3D tab, choose X/Y/Z in 3D view and export, then move or flip the cutting plane. Off restores the full view. Use Isolate selection, Clear isolation and Focus selection to inspect elements. These operations preserve CAD geometry. GLB exports the displayed model in meters with open cut faces.</p>
 <h3>Results and load assignment</h3>
 <p>Open Results / load assignment and load the result JSON produced by the external OpenSeesPy CLI from the same CAD model. Choose projection and deformation scale to inspect displacements and reactions. Changed models require new analysis and result import.</p>
+<p>Choose N / Qy / Qz / T / My / Mz under "Force diagram" to overlay each member's section forces on the same projection as the deformed shape, together with a table of I-end and J-end section forces per element. Tension is positive and moments follow the right-hand rule about the local axis; positive ordinates are drawn toward local +y (Qy, Mz) or +z (N, Qz, T, My), so My of a horizontal beam appears on the tension side. "Export member forces CSV" saves the load case, element identity and both end forces.</p>
 <p>For line loads choose one member; for rectangular area loads choose the one-way span and both supporting edges. The preview preserves resultant forces and moments, but endpoint lumping does not reproduce distributed-load member bending. Accept this limitation before exporting distributed analysis JSON. After solving it, load that same JSON as the optional reference before loading results.</p>
 <p>The solver supports rigid-ended linear frame elements and nodal loads. IFC export covers beams, columns, storeys and three section profiles. See <a href="docs/analysis-tools.md" target="_blank" rel="noopener">analysis / IFC tools</a> for commands and supported inputs.</p>
 <h3>Plan input workspace</h3>
@@ -310,6 +313,7 @@ export const helpContentEn = `
   <tr><td><b>Load CAD</b></td><td>Click File → Load CAD to load a JSON file. Existing custom definitions in memory are preserved</td></tr>
   <tr><td><b>Export Defs</b></td><td>Model → User Definitions → "Export" to save custom definitions to a separate file</td></tr>
   <tr><td><b>Import Defs</b></td><td>Model → User Definitions → "Import" to load custom definitions from another environment. Definitions with duplicate names (including those loaded from CAD files) are skipped</td></tr>
+  <tr><td><b>Member Schedule CSV</b></td><td>File → Summary → "Export Member Schedule CSV" writes one row per member type and section (count, length, unit weight from material density × section area, weight) followed by one row per member. The same "Member Schedule" table appears in the Summary panel. Weight is left blank when the section area or density is unknown</td></tr>
 </table>
 <p>When importing, the number of added and skipped items is shown. Section and spring definitions can include a memo (description text).</p>
 <p>Node, member, surface, load, and support IDs are written to CAD files and preserved when reloaded. Files saved with older versions can still be loaded.</p>

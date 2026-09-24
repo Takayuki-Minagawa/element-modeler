@@ -1,5 +1,5 @@
 // Standalone DOM modules. Parent owns file picking, state revisions and mounting.
-import { buildResultView } from './results.js';
+import { FORCE_COMPONENTS, buildMemberForceCSV, buildResultView } from './results.js';
 import { previewToPointLoads } from './load-distribution.js';
 
 const NS = 'http://www.w3.org/2000/svg';
@@ -16,6 +16,10 @@ const messages = {
     line: 'Endpoint lumping conserves force and moment, but omits distributed-load member bending/fixed-end forces.',
     slab: 'Uniform one-way tributary distribution only; no slab stiffness/two-way action. Nodal export uses static lumping.',
     gravity: 'Density self-weight explicitly omitted; this is a load-only analysis.',
+    component: 'Force diagram', forces: 'Section forces (I end → J end)', exportForces: 'Export member forces CSV',
+    forcesExported: 'Member forces CSV exported.',
+    convention: 'Section forces are derived from the end forces the nodes apply to each element. Tension positive; moments follow the right-hand rule about the local axis. Positive ordinates are drawn toward local +y (Qy, Mz) or local +z (N, Qz, T, My); components normal to the projection plane collapse onto the member line.',
+    diagram: 'Diagram', maxAbs: 'max |value|',
   },
   ja: {
     results: '線形静的解析結果', preview: '荷重配分プレビュー', select: '選択', node: '節点', member: '部材 / 枝番',
@@ -29,6 +33,10 @@ const messages = {
     line: '端部節点への集中配分は合力とモーメントを保存しますが、分布荷重による部材内の曲げ・固定端力は再現しません。',
     slab: '等分布荷重を受ける矩形床の一方向配分のみ。床剛性・二方向作用は対象外。節点荷重出力は端部への集中配分です。',
     gravity: '密度からの自重を明示的に省略しています。指定した節点荷重のみの解析です。',
+    component: '応力図', forces: '断面力（I端 → J端）', exportForces: '材端力CSVを出力',
+    forcesExported: '材端力CSVを出力しました。',
+    convention: '断面力は節点が要素へ与える材端力から算出します。引張正、モーメントは局所軸まわりの右手則。図の正側は局所+y（Qy, Mz）または局所+z（N, Qz, T, My）で、表示面に直交する成分は部材線上に重なります。',
+    diagram: '応力図', maxAbs: '最大絶対値',
   },
 };
 function element(doc, tag, text) {
@@ -49,10 +57,10 @@ function table(doc, headers, rows) {
   return out;
 }
 const values = row => row.map(v => Number(v).toPrecision(6)).join(', ');
-function drawing(doc, paths, plane) {
+function drawing(doc, paths, plane, shapes = []) {
   const indices = plane === 'yz' ? [1, 2] : plane === 'xy' ? [0, 1] : [0, 2];
   const ranges = [[Infinity, -Infinity], [Infinity, -Infinity]];
-  for (const path of paths) for (const point of path.points) {
+  for (const path of [...paths, ...shapes]) for (const point of path.points) {
     indices.forEach((axis, i) => {
       ranges[i][0] = Math.min(ranges[i][0], point[axis]);
       ranges[i][1] = Math.max(ranges[i][1], point[axis]);
@@ -64,6 +72,15 @@ function drawing(doc, paths, plane) {
   svg.setAttribute('viewBox', '0 0 600 360');
   svg.style.width = '100%'; svg.style.maxHeight = '420px';
   svg.setAttribute('role', 'img'); svg.setAttribute('aria-label', `Structural preview ${plane.toUpperCase()}`);
+  for (const shape of shapes) {
+    const polygon = doc.createElementNS(NS, 'polygon');
+    polygon.setAttribute('points', shape.points.map(p => project(p).join(',')).join(' '));
+    polygon.setAttribute('fill', shape.color); polygon.setAttribute('fill-opacity', '0.35');
+    polygon.setAttribute('stroke', shape.color); polygon.setAttribute('stroke-width', '1');
+    polygon.setAttribute('class', 'force-diagram');
+    const title = doc.createElementNS(NS, 'title'); title.textContent = shape.label; polygon.append(title);
+    svg.append(polygon);
+  }
   for (const path of paths) {
     const line = doc.createElementNS(NS, 'polyline');
     line.setAttribute('points', path.points.map(p => project(p).join(',')).join(' '));
@@ -75,30 +92,65 @@ function drawing(doc, paths, plane) {
   return svg;
 }
 
+/** One quadrilateral per member: the member line plus ordinates along local +y (Qy, Mz) or +z (others),
+ * scaled so the largest ordinate spans a fixed fraction of the model extent. */
+export function forceDiagramShapes(view, component, { fraction = 0.15 } = {}) {
+  const extreme = view.extremes[component];
+  if (!extreme) return [];
+  const bounds = [0, 1, 2].map(axis => {
+    const coordinates = view.members.flatMap(m => m.original.map(p => p[axis]));
+    return Math.max(...coordinates) - Math.min(...coordinates);
+  });
+  const extent = Math.max(...bounds, ...view.members.map(m => m.axes.length));
+  const factor = fraction * extent / extreme;
+  const color = { N: '#d9534f', Qy: '#5cb85c', Qz: '#5cb85c', T: '#8e44ad', My: '#f0ad4e', Mz: '#f0ad4e' }[component];
+  return view.members.map(m => {
+    const direction = component === 'Qy' || component === 'Mz' ? m.axes.y : m.axes.z;
+    const [vi, vj] = m.forces[component];
+    const offset = (point, value) => point.map((coordinate, k) => coordinate + direction[k]*value*factor);
+    return { points: [m.original[0], offset(m.original[0], vi), offset(m.original[1], vj), m.original[1]], color,
+      label: `${m.sourceId}/${m.sourceBranch} ${component}: ${Number(vi.toPrecision(6))} → ${Number(vj.toPrecision(6))}` };
+  });
+}
+
 /** Returns {dispose, invalidate}; call invalidate immediately on model edits.
  * Selection callback: ({elementId, sourceId, sourceBranch}). No state mutation.
  */
-export async function mountResultsPanel(container, model, result, { scale = 1, plane = 'xz', language = 'en', onSelect = () => {} } = {}) {
+export async function mountResultsPanel(container, model, result, { scale = 1, plane = 'xz', component = 'none', language = 'en', onSelect = () => {}, onExportForces = null } = {}) {
   const t = messages[language] || messages.en;
+  if (component !== 'none' && !FORCE_COMPONENTS.includes(component)) throw new Error('Unknown force component');
   const view = await buildResultView(model, result, { scale });
   const doc = container.ownerDocument;
   const root = element(doc, 'section'); root.setAttribute('aria-label', t.results);
   root.append(element(doc, 'h3', `${t.results} — ${view.loadCase}`));
   root.append(element(doc, 'p', `${t.scale} ×${scale}; ${t.view}`));
   view.warnings.forEach(warning => root.append(element(doc, 'p', warning === messages.en.gravity ? t.gravity : warning)));
+  const shapes = component === 'none' ? [] : forceDiagramShapes(view, component);
   const plot = drawing(doc, view.members.flatMap(m => [
     { points: m.original, color: '#888', label: `${m.sourceId}/${m.sourceBranch} original` },
     { points: m.deformed, color: '#168ce0', label: `${m.sourceId}/${m.sourceBranch} deformed` },
-  ]), plane);
+  ]), plane, shapes);
   root.append(plot);
+  if (component !== 'none') {
+    const unit = component === 'N' || component.startsWith('Q') ? 'N' : 'N·mm';
+    root.append(element(doc, 'p', `${t.diagram}: ${component} [${unit}]; ${t.maxAbs} ${Number(view.extremes[component].toPrecision(6))}. ${t.convention}`));
+  }
   root.append(table(doc, [t.node, 'ux, uy, uz [mm]; rx, ry, rz [rad]', 'Fx, Fy, Fz [N]; Mx, My, Mz [N·mm]'],
     view.nodes.map(n => [n.id, values(n.displacement), values(n.reaction)])));
+  root.append(element(doc, 'h4', t.forces));
+  root.append(table(doc, [t.member, 'N, Qy, Qz [N]; T, My, Mz [N·mm] @ I', 'N, Qy, Qz [N]; T, My, Mz [N·mm] @ J'],
+    view.members.map(m => [`${m.sourceId}/${m.sourceBranch} (${m.id})`,
+      values(FORCE_COMPONENTS.map(c => m.forces[c][0])), values(FORCE_COMPONENTS.map(c => m.forces[c][1]))])));
   const handlers = [];
+  const bind = (button, handler) => { button.type = 'button'; button.addEventListener('click', handler); handlers.push([button, handler]); root.append(button); };
+  if (onExportForces) {
+    const status = element(doc, 'p'); status.setAttribute('role', 'status');
+    bind(element(doc, 'button', t.exportForces), () => { onExportForces(buildMemberForceCSV(view), view.loadCase); status.textContent = t.forcesExported; });
+    root.append(status);
+  }
   for (const member of view.members) {
-    const button = element(doc, 'button', `${t.select} ${member.sourceId}/${member.sourceBranch}`);
-    button.type = 'button';
-    const handler = () => onSelect({ elementId: member.id, sourceId: member.sourceId, sourceBranch: member.sourceBranch });
-    button.addEventListener('click', handler); handlers.push([button, handler]); root.append(button);
+    bind(element(doc, 'button', `${t.select} ${member.sourceId}/${member.sourceBranch}`),
+      () => onSelect({ elementId: member.id, sourceId: member.sourceId, sourceBranch: member.sourceBranch }));
   }
   container.append(root);
   const cleanup = () => handlers.forEach(([button, handler]) => button.removeEventListener('click', handler));

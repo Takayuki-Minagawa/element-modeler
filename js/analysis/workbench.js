@@ -3,6 +3,7 @@ import { getLang } from '../i18n.js';
 import { modelFingerprint } from './fingerprint.js';
 import { previewLineLoad, previewRectangularSlab } from './load-distribution.js';
 import { mountLoadPreview, mountResultsPanel } from './panels.js';
+import { FORCE_COMPONENTS } from './results.js';
 
 // The supported load subset has an explicit vertical sign and explicit targets.
 export function previewModelLoad(model, loadId, { elementIds, spanAxis = 'x', sign = -1 }) {
@@ -77,12 +78,14 @@ export function initAnalysisWorkbench({ state, host, onSelect = () => {} }) {
   const clear = () => { disposePanel(); originalFingerprint = null; lastResult = null; clearReference(); status.textContent = ''; };
   dialog.addEventListener('close', () => { serial++; });
   const error = cause => { status.textContent = text('処理できません: ', 'Cannot continue: ') + cause.message; };
-  const download = model => {
+  const downloadFile = (name, parts, type) => {
     if (downloadURL) URL.revokeObjectURL(downloadURL);
-    downloadURL = URL.createObjectURL(new Blob([JSON.stringify(model, null, 2)], { type: 'application/json' }));
+    downloadURL = URL.createObjectURL(new Blob(parts, { type }));
     const anchor = make('a', dialog);
-    anchor.href = downloadURL; anchor.download = 'distributed-analysis.json'; anchor.click(); anchor.remove();
+    anchor.href = downloadURL; anchor.download = name; anchor.click(); anchor.remove();
   };
+  const download = model => downloadFile('distributed-analysis.json', [JSON.stringify(model, null, 2)], 'application/json');
+  const downloadForces = (csv, loadCase) => downloadFile(`member-forces-${loadCase}.csv`, ['\ufeff', csv], 'text/csv;charset=utf-8');
   const selectControl = (label, options, id) => {
     const wrapper = make('label', controls, label);
     const select = make('select', wrapper); select.id = id;
@@ -154,6 +157,8 @@ export function initAnalysisWorkbench({ state, host, onSelect = () => {} }) {
     });
     const resultFile = fileControl(text('解析結果JSON', 'Analysis result JSON'), 'analysis-result-file');
     const plane = selectControl(text('表示面', 'Projection'), [['xz', 'XZ'], ['yz', 'YZ'], ['xy', 'XY']], 'analysis-result-plane');
+    const component = selectControl(text('応力図', 'Force diagram'),
+      [['none', text('なし', 'None')], ...FORCE_COMPONENTS.map(c => [c, c])], 'analysis-result-component');
     const scaleLabel = make('label', controls, text('変形倍率', 'Deformation scale'));
     const scale = make('input', scaleLabel); scale.type = 'number'; scale.min = '0'; scale.value = '1'; scale.id = 'analysis-result-scale';
     const renderResult = async () => {
@@ -164,7 +169,8 @@ export function initAnalysisWorkbench({ state, host, onSelect = () => {} }) {
         const current = buildAnalysisModel(state);
         const reference = verifiedReference?.model || current;
         const result = lastResult;
-        const options = { language: getLang(), scale: Number(scale.value), plane: plane.value, onSelect };
+        const options = { language: getLang(), scale: Number(scale.value), plane: plane.value, component: component.value,
+          onSelect, onExportForces: downloadForces };
         const fingerprint = await modelFingerprint(current);
         if (!isCurrent(request)) return;
         if (reference !== current) await validateReferenceModel(current, reference);
@@ -191,6 +197,7 @@ export function initAnalysisWorkbench({ state, host, onSelect = () => {} }) {
       catch (cause) { if (isCurrent(request)) { disposePanel(); error(cause); } }
     });
     scale.addEventListener('change', renderResult); plane.addEventListener('change', renderResult);
+    component.addEventListener('change', renderResult);
   }
   function applyLanguage() {
     openButton.textContent = text('解析結果・荷重配分', 'Results / load assignment');

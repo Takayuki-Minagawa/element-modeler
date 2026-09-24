@@ -6,6 +6,7 @@ import { AppState } from '../js/state.js';
 import { CURRENT_SCHEMA_VERSION } from '../js/serialization.js';
 import {
   computeMemberLengthM,
+  computeMemberSchedule,
   computeQuantitySummary,
   computeRoofMemberSummary,
   computeSurfaceWeightAreaM2,
@@ -1161,4 +1162,47 @@ test('roof slope member generation skips spans outside a re-entrant notch bounda
     [0, 1500, 3000, 3000],
     [3500, 5000, 3000, 3000],
   ]);
+});
+
+test('member schedule groups line members by type and section with density-based weight', () => {
+  const state = new AppState();
+  state.addMaterial({ name: 'wood-custom', E: 7000, G: 500, density: 400 });
+  state.addSection({ target: 'member', type: 'beam', name: 'W120x240', material: 'wood-custom', b: 120, h: 240 });
+  state.addSection({ target: 'member', type: 'beam', name: 'NoMaterial', material: 'missing', b: 100, h: 100 });
+  const n1 = state.addNode(0, 0);
+  const n2 = state.addNode(6000, 0);
+  const n3 = state.addNode(6000, 4000);
+  state.addMember(n1.id, n2.id, { type: 'beam', levelId: 'L1', sectionName: 'W120x240' });
+  state.addMember(n2.id, n3.id, { type: 'beam', levelId: 'L1', sectionName: 'W120x240' });
+  state.addMember(n1.id, n3.id, { type: 'beam', levelId: 'L1', sectionName: 'NoMaterial' });
+  const column = state.addMember(n1.id, n1.id, { type: 'column', levelId: 'L0', topLevelId: 'L1' });
+
+  assert.equal(computeMemberLengthM(state, column), 2.8);
+  const schedule = computeMemberSchedule(state);
+  assert.deepEqual(schedule.rows.map(row => [row.type, row.sectionName, row.count]), [
+    ['column', '_C', 1],
+    ['beam', 'NoMaterial', 1],
+    ['beam', 'W120x240', 2],
+  ]);
+  const wood = schedule.rows[2];
+  assert.equal(wood.material, 'wood-custom');
+  assert.equal(wood.areaMm2, 28800);
+  assert.equal(wood.density, 400);
+  assert.ok(Math.abs(wood.unitWeightKgPerM - 11.52) < 1e-9);
+  assert.equal(wood.lengthM, 10);
+  assert.ok(Math.abs(wood.weightKg - 115.2) < 1e-9);
+  const steelColumn = schedule.rows[0];
+  assert.equal(steelColumn.lengthM, 2.8);
+  assert.ok(Math.abs(steelColumn.unitWeightKgPerM - 105*105/1e6*7850) < 1e-9);
+  assert.equal(schedule.rows[1].weightKg, null);
+  assert.equal(schedule.rows[1].unitWeightKgPerM, null);
+  assert.equal(schedule.totals.count, 4);
+  assert.equal(schedule.totals.unknownWeightCount, 1);
+  assert.ok(Math.abs(schedule.totals.lengthM - (10 + 2.8 + Math.hypot(6, 4))) < 1e-9);
+  assert.ok(Math.abs(schedule.totals.weightKg - (115.2 + steelColumn.weightKg)) < 1e-9);
+  assert.equal(schedule.members.length, 4);
+  assert.equal(schedule.members.find(row => row.sectionName === 'NoMaterial').weightKg, null);
+  assert.deepEqual(computeMemberSchedule(new AppState()), {
+    rows: [], members: [], totals: { count: 0, lengthM: 0, weightKg: 0, unknownWeightCount: 0 },
+  });
 });

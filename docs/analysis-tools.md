@@ -142,6 +142,19 @@ Iyはlocal yまわり、Izはlocal zまわり。鉛直近傍の切替しきい�
 部材端力はOpenSeesのlocal resisting end forceで、I端6成分、J端6成分の順です。
 途中断面の断面力図と同一の符号表現ではありません。
 
+結果パネルの断面力（`memberInternalForces`）は材端力（節点が要素へ与える力）の符号を反転して求めます。
+節点荷重のみの範囲では N・Qy・Qz・T は部材内で一定、My・Mz は直線です（局所 x = I→J の距離 s）。
+
+```text
+N(s) = -N_I,  Qy(s) = -Qy_I,  Qz(s) = -Qz_I,  T(s) = -T_I
+My(s) = -My_I - s·Qz_I,  Mz(s) = -Mz_I + s·Qy_I
+```
+
+J端の値は節点 J が要素へ与える材端力と一致します。引張正、モーメントは局所軸まわりの右手則です。
+水平梁（local z = global Z）では下側引張の曲げが負の My になり、応力図は局所 +y（Qy, Mz）または +z（N, Qz, T, My）を正側に描くため、
+My は引張側に表示されます。表示面に直交する成分は部材線上に重なります。
+「材端力CSVを出力」は `member-forces-<case>.csv` に load_case・要素・sourceId/branch・節点・長さ・両端の断面力を書き出します。
+
 ### CLIと失敗時の扱い
 
 `--emit-python`は数値を埋め込んだ独立実行可能なOpenSeesPyスクリプトを出力します。
@@ -232,8 +245,9 @@ import { modelFingerprint } from './js/analysis/fingerprint.js';
 import { validateAnalysisResult, buildResultView } from './js/analysis/results.js';
 
 const resultPanel = await mountResultsPanel(container, analysisModel, resultJSON, {
-  language: 'ja', scale: 50, plane: 'xz',
+  language: 'ja', scale: 50, plane: 'xz', component: 'My', // 'none' | 'N' | 'Qy' | 'Qz' | 'T' | 'My' | 'Mz'
   onSelect: ({ elementId, sourceId, sourceBranch }) => selectCadMember(sourceId),
+  onExportForces: (csv, loadCase) => download(`member-forces-${loadCase}.csv`, csv), // 省略時はボタン非表示
 });
 // CAD変更時に呼ぶ。workbenchは非同期読込中のモデル変更もfingerprintで再確認する。
 resultPanel.invalidate();
@@ -258,6 +272,9 @@ mount関数は渡されたcontainer内へsectionを追加し、他の子要素�
 `language:'ja'|'en'`を受付。モデル、AppState、履歴、既存viewerは変更しません。
 ファイル選択・ダウンロード・CAD選択・変更監視・言語再描画はworkbenchの責務です。
 SVGは同一縮尺で投影し、変形倍率だけを掛けます。反力は表表示です。
+`component`を指定すると`forceDiagramShapes(view, component)`が部材ごとの四角形（部材線＋両端の縦距）を作り、
+最大縦距がモデル範囲の15%になるよう縮尺します。`buildResultView`の各memberは`axes`・`endForces`・`forces{N,Qy,Qz,T,My,Mz:[I,J]}`を持ち、
+`extremes`に成分別の最大絶対値を返します。`buildMemberForceCSV(view)`は同じ内容のCSV文字列です。
 `getLang()`を使うworkbenchとの接続済みAPIは
 `initAnalysisWorkbench({state,host,onSelect})` → `{refresh,applyLanguage,dispose}`です。
 

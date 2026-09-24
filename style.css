@@ -455,6 +455,9 @@ body.property-collapsed #property-panel > * {
 .quantity-detail-table {
   min-width: 380px;
 }
+.quantity-schedule-table {
+  min-width: 360px;
+}
 .model-check-list {
   display: grid;
   gap: 6px;

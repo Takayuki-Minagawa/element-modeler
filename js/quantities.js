@@ -4,6 +4,7 @@ import { MM2_TO_M2 } from './constants.js';
 import { ROOF_MEMBER_ROLE_ORDER } from './element-style.js';
 import { finiteNumber, signedArea2 } from './geometry-utils.js';
 import { roofActualAreaM2, roofProjectionAreasM2 } from './roof-geometry.js';
+import { sectionProperties } from './section-catalog.js';
 import { isGableWallSurfaceType, isSlopedSurfaceType, isWallSurfaceType } from './state.js';
 
 export function resolveSurfaceVerticalRange(state, surface) {
@@ -114,20 +115,94 @@ export function computeRoofMemberSummary(state) {
   };
 }
 
+const MEMBER_TYPE_ORDER = ['column', 'beam', 'hbrace', 'vbrace'];
+const MM2_PER_M2 = 1e6;
+
+function optionalPositive(value) {
+  const n = Number(value);
+  return Number.isFinite(n) && n > 0 ? n : null;
+}
+
+/**
+ * Member schedule grouped by (type, section name): counts, total length and
+ * weight from material density x section area. Rows without a resolvable
+ * section area or material density report weight null instead of 0 so the
+ * totals never silently omit members. Weight = density [kg/m3] x A [mm2] / 1e6 x L [m].
+ */
+export function computeMemberSchedule(state) {
+  const groups = new Map();
+  const members = [];
+  for (const member of state.members || []) {
+    const type = member.type || '';
+    const sectionName = member.sectionName || '';
+    const section = sectionName ? state.getSection('member', type, sectionName) : null;
+    const properties = section ? sectionProperties(section) : null;
+    const areaMm2 = optionalPositive(properties?.A);
+    const materialName = section?.material || '';
+    const density = optionalPositive(materialName ? state.getMaterial(materialName)?.density : null);
+    const unitWeightKgPerM = areaMm2 !== null && density !== null ? areaMm2 / MM2_PER_M2 * density : null;
+    const lengthM = computeMemberLengthM(state, member);
+    const weightKg = unitWeightKgPerM === null ? null : unitWeightKgPerM * lengthM;
+    const key = `${type}\u0000${sectionName}`;
+    if (!groups.has(key)) {
+      groups.set(key, {
+        type, sectionName, material: materialName, areaMm2, density, unitWeightKgPerM,
+        count: 0, lengthM: 0, weightKg: unitWeightKgPerM === null ? null : 0,
+      });
+    }
+    const group = groups.get(key);
+    group.count += 1;
+    group.lengthM += lengthM;
+    if (group.weightKg !== null) group.weightKg += weightKg;
+    members.push({
+      id: member.id || '', type, sectionName, levelId: member.levelId || '', roofRole: member.roofRole || '',
+      lengthM, weightKg,
+    });
+  }
+  const typeIndex = type => {
+    const index = MEMBER_TYPE_ORDER.indexOf(type);
+    return index === -1 ? MEMBER_TYPE_ORDER.length : index;
+  };
+  const rows = [...groups.values()].sort((a, b) => (
+    typeIndex(a.type) - typeIndex(b.type) ||
+    a.type.localeCompare(b.type) ||
+    a.sectionName.localeCompare(b.sectionName)
+  ));
+  const unknownWeightCount = members.filter(row => row.weightKg === null).length;
+  return {
+    rows,
+    members,
+    totals: {
+      count: members.length,
+      lengthM: rows.reduce((sum, row) => sum + row.lengthM, 0),
+      weightKg: rows.reduce((sum, row) => sum + (row.weightKg ?? 0), 0),
+      unknownWeightCount,
+    },
+  };
+}
+
 export function computeMemberLengthM(state, member) {
   const startNode = state.getNode(member.startNodeId);
   const endNode = state.getNode(member.endNodeId);
   if (!startNode || !endNode) return 0;
   const dx = finiteNumber(endNode.x, 0) - finiteNumber(startNode.x, 0);
   const dy = finiteNumber(endNode.y, 0) - finiteNumber(startNode.y, 0);
-  const levelZ = state.getLevelZ(member.levelId);
-  const startZ = member.geometryMode === 'explicit3d' && Number.isFinite(Number(member.startZ))
-    ? Number(member.startZ)
-    : levelZ;
-  const endZ = member.geometryMode === 'explicit3d' && Number.isFinite(Number(member.endZ))
-    ? Number(member.endZ)
-    : levelZ;
-  return Math.hypot(dx, dy, endZ - startZ) / 1000;
+  return Math.hypot(dx, dy, memberEndZ(state, member, 'end') - memberEndZ(state, member, 'start')) / 1000;
+}
+
+// Columns and vertical braces span from levelId to topLevelId; other members
+// sit on their level unless they carry explicit 3D end elevations.
+function memberEndZ(state, member, which) {
+  if (member.type === 'column' || member.type === 'vbrace') {
+    return which === 'start'
+      ? state.getLevelZ(member.levelId)
+      : state.getLevelZ(member.topLevelId || member.levelId);
+  }
+  if (member.geometryMode === 'explicit3d') {
+    const value = Number(which === 'start' ? member.startZ : member.endZ);
+    if (Number.isFinite(value)) return value;
+  }
+  return state.getLevelZ(member.levelId);
 }
 
 export function computeSurfaceWindProjectionM2(state, surface) {

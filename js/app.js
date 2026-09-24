@@ -19,6 +19,7 @@ import {
   exportJSON,
   importDXFUnderlay,
   importJSON,
+  exportMemberScheduleCSV,
   exportQuantityDetailCSV,
   exportQuantitySummaryCSV,
 } from './io.js';
@@ -402,6 +403,11 @@ document.getElementById('btn-quantity-export')?.addEventListener('click', () => 
 document.getElementById('btn-quantity-detail-export')?.addEventListener('click', () => {
   exportQuantityDetailCSV(state);
   showNotice(t('quantityDetailCsvExported'), 'success');
+});
+
+document.getElementById('btn-member-schedule-export')?.addEventListener('click', () => {
+  exportMemberScheduleCSV(state);
+  showNotice(t('memberScheduleCsvExported'), 'success');
 });
 
 function runAnalysisExport(exporter, successKey) {

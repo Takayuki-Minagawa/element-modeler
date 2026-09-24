@@ -6,10 +6,10 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
-  <title>Element Modeler - Ver.1.4.0</title>
+  <title>Element Modeler - Ver.1.5.0</title>
   <link rel="help" href="docs/coordinate-input.md" type="text/markdown">
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
-  <link rel="stylesheet" href="style.css?v=1.4.0">
+  <link rel="stylesheet" href="style.css?v=1.5.0">
 </head>
 <body>
 <header id="app-header">
@@ -27,6 +27,7 @@
 <p class="menu-section" data-i18n="quantitySummary">集計</p>
 <button type="button" id="btn-quantity-export" data-i18n="quantityCsvExport">CSV出力</button>
 <button type="button" id="btn-quantity-detail-export" data-i18n="quantityDetailCsvExport">詳細CSV出力</button>
+<button type="button" id="btn-member-schedule-export" data-i18n="memberScheduleCsvExport">部材リストCSV出力</button>
 </div></div>
 <div class="menu-group"><button type="button" id="menu-edit-trigger" class="menu-trigger" aria-expanded="false" aria-controls="menu-edit" data-i18n="menuEdit">編集</button><div id="menu-edit" class="menu-dropdown" role="group" aria-labelledby="menu-edit-trigger" hidden>
 <button type="button" data-history="undo"><span data-i18n="menuUndo">元に戻す</span><kbd>Ctrl+Z</kbd></button>
@@ -277,7 +278,7 @@
       <span id="status-zoom">Zoom: 100%</span>
       <span id="status-tool" data-i18n="toolMember">ツール: 線材</span>
       <div id="recovery-tools"></div>
-      <span id="status-version">Ver.1.4.0</span>
+      <span id="status-version">Ver.1.5.0</span>
     </footer>
   </main>
   <div id="property-resizer" class="side-resizer side-resizer-right" role="separator" aria-label="Resize properties" aria-orientation="vertical">
@@ -889,6 +890,6 @@
     }
   }
   </script>
-  <script type="module" src="js/app.js?v=1.4.0"></script>
+  <script type="module" src="js/app.js?v=1.5.0"></script>
 </body>
 </html>
