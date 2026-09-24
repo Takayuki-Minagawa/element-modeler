@@ -338,3 +338,21 @@ test('dialog close cancels an export waiting for its final digest', async t => {
   gate.release(); await drain();
   assert.equal(ui.downloads.length, 0);
 });
+
+test('workbench offers force diagram components, re-renders on change and downloads the member force CSV', async t => {
+  const ui = workbench(t), result = await resultFor(buildAnalysisModel(ui.state));
+  const component = ui.byId('analysis-result-component');
+  assert.deepEqual(component.children.map(option => option.value), ['none', 'N', 'Qy', 'Qz', 'T', 'My', 'Mz']);
+  await ui.upload('analysis-result-file', result);
+  assert.equal(svgCount(ui), 1);
+  assert.equal(ui.output.find(n => n.tag === 'polygon').length, 0);
+  component.value = 'N'; await component.emit('change');
+  assert.equal(svgCount(ui), 1);
+  assert.match(ui.output.textContent, /Force diagram|応力図/);
+  ui.output.find(n => n.tag === 'button' && /材端力CSV|member forces CSV/.test(n.textContent))[0].click();
+  await ui.downloaded;
+  assert.equal(ui.downloads.length, 1);
+  assert.equal(ui.downloads[0].type, 'text/csv;charset=utf-8');
+  const text = await ui.downloads[0].text(); // Blob.text() strips the UTF-8 BOM prefix
+  assert.match(text, /^load_case,element/); assert.match(text, /\r\nDL,1,M1,primary,1,2,5000,/);
+});

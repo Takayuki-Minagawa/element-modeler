@@ -42,6 +42,34 @@ export async function validateAnalysisResult(model, result) {
   return { nodes, elements };
 }
 
+export const FORCE_COMPONENTS = ['N', 'Qy', 'Qz', 'T', 'My', 'Mz'];
+const csvCell = value => /[",\r\n]/.test(String(value)) ? `"${String(value).replaceAll('"', '""')}"` : String(value);
+
+/** Section forces at both member ends from the local end forces applied by the nodes to the element.
+ * Nodal loads only: N, Qy, Qz and T are constant, My and Mz vary linearly along local x.
+ * Right-handed local axes; tension positive; moments follow the right-hand rule about the local axis.
+ */
+export function memberInternalForces(localEndForces, length) {
+  if (!validVector(localEndForces, 12) || !Number.isFinite(length) || length <= 0) {
+    throw new Error('Expected 12 finite end forces and a positive member length');
+  }
+  const [Ni, Qyi, Qzi, Ti, Myi, Mzi] = localEndForces;
+  const clean = values => values.map(v => (v === 0 ? 0 : v)); // avoid -0 in tables and CSV
+  return {
+    N: clean([-Ni, -Ni]), Qy: clean([-Qyi, -Qyi]), Qz: clean([-Qzi, -Qzi]), T: clean([-Ti, -Ti]),
+    My: clean([-Myi, -Myi - length*Qzi]), Mz: clean([-Mzi, -Mzi + length*Qyi]),
+  };
+}
+
+/** Member section forces at the I and J ends, one CSV row per element (mm, N, N·mm). */
+export function buildMemberForceCSV(view) {
+  const header = ['load_case', 'element', 'source_id', 'source_branch', 'node_i', 'node_j', 'length_mm',
+    ...['i', 'j'].flatMap(end => FORCE_COMPONENTS.map(c => `${c}_${end}_${c.startsWith('Q') || c === 'N' ? 'N' : 'Nmm'}`))];
+  const rows = view.members.map(m => [view.loadCase, m.id, m.sourceId, m.sourceBranch, m.nodeI, m.nodeJ, m.axes.length,
+    ...[0, 1].flatMap(end => FORCE_COMPONENTS.map(c => Number(m.forces[c][end].toPrecision(10))))]);
+  return `${[header, ...rows].map(row => row.map(csvCell).join(',')).join('\r\n')}\r\n`;
+}
+
 export function memberAxes(start, end) {
   const delta = end.map((v, i) => v - start[i]);
   const length = Math.hypot(...delta);
@@ -58,7 +86,8 @@ export async function buildResultView(model, result, { scale = 1, segments = 24 
   if (!Number.isFinite(scale) || scale < 0 || !Number.isInteger(segments) || segments < 1 || segments > 1000) {
     throw new Error('Expected nonnegative deformation scale and segments in 1..1000');
   }
-  const { nodes } = await validateAnalysisResult(model, result);
+  const { nodes, elements } = await validateAnalysisResult(model, result);
+  const extremes = Object.fromEntries(FORCE_COMPONENTS.map(c => [c, 0]));
   const dot = (a, b) => a.reduce((out, v, i) => out + v*b[i], 0);
   const members = model.elements.map(e => {
     const ni = nodes.get(e.nodeI), nj = nodes.get(e.nodeJ);
@@ -74,9 +103,12 @@ export async function buildResultView(model, result, { scale = 1, segments = 24 
         h1*di[2]-L*h2*di[4]+h3*dj[2]-L*h4*dj[4]];
       return ni.position.map((v, k) => v + t*(nj.position[k]-v) + scale*basis.reduce((s, a, j) => s+a[k]*displacement[j], 0));
     });
-    return { id: e.id, sourceId: e.sourceId, sourceBranch: e.sourceBranch,
-      original: [ni.position, nj.position], deformed: points };
+    const endForces = elements.get(e.id).localEndForces.slice();
+    const forces = memberInternalForces(endForces, L);
+    for (const c of FORCE_COMPONENTS) extremes[c] = Math.max(extremes[c], ...forces[c].map(Math.abs));
+    return { id: e.id, sourceId: e.sourceId, sourceBranch: e.sourceBranch, nodeI: e.nodeI, nodeJ: e.nodeJ,
+      axes, endForces, forces, original: [ni.position, nj.position], deformed: points };
   });
-  return { scale, loadCase: result.loadCase, members, nodes: result.nodes,
+  return { scale, loadCase: result.loadCase, members, nodes: result.nodes, extremes,
     reactions: result.nodes.filter(n => n.reaction.some(v => v !== 0)), warnings: result.warnings || [] };
 }

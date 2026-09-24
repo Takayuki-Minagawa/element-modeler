@@ -5,6 +5,7 @@ import { buildDXF, parseDXF } from './dxf.js';
 import { applyModelImport } from './persistence/model-import.js';
 import {
   computeMemberLengthM,
+  computeMemberSchedule,
   computeQuantitySummary,
   computeSurfaceSeismicWeightN,
   computeSurfaceWeightAreaM2,
@@ -155,6 +156,44 @@ export function buildQuantityDetailCSV(state) {
 export function exportQuantityDetailCSV(state) {
   const name = state.meta?.name || 'lineframe';
   downloadCsv(`${name}_quantity_details_${timestamp()}.csv`, buildQuantityDetailCSV(state));
+}
+
+/**
+ * Member schedule CSV: one `schedule` row per (type, section), a `total` row and
+ * one `member` row per line member. Weight cells stay blank when the section
+ * area or material density is unknown.
+ */
+export function buildMemberScheduleCSV(state) {
+  const schedule = computeMemberSchedule(state);
+  const cell = value => (value === null ? '' : formatCsvNumber(value)); // unknown weights stay blank, never 0
+  const rows = [
+    ['section', 'type', 'section_name', 'material', 'area_mm2', 'density_kg_m3', 'unit_weight_kg_m',
+      'count', 'length_m', 'weight_kg', 'id', 'level', 'roof_role'],
+  ];
+  for (const row of schedule.rows) {
+    rows.push([
+      'schedule', row.type, row.sectionName, row.material,
+      cell(row.areaMm2), cell(row.density), cell(row.unitWeightKgPerM),
+      String(row.count), formatCsvNumber(row.lengthM), cell(row.weightKg), '', '', '',
+    ]);
+  }
+  rows.push([
+    'total', '', '', '', '', '', '',
+    String(schedule.totals.count), formatCsvNumber(schedule.totals.lengthM), formatCsvNumber(schedule.totals.weightKg),
+    '', '', '',
+  ]);
+  for (const row of schedule.members) {
+    rows.push([
+      'member', row.type, row.sectionName, '', '', '', '', '',
+      formatCsvNumber(row.lengthM), cell(row.weightKg), row.id, row.levelId, row.roofRole,
+    ]);
+  }
+  return `${rows.map(row => row.map(csvCell).join(',')).join('\r\n')}\r\n`;
+}
+
+export function exportMemberScheduleCSV(state) {
+  const name = state.meta?.name || 'lineframe';
+  downloadCsv(`${name}_member_schedule_${timestamp()}.csv`, buildMemberScheduleCSV(state));
 }
 
 export function exportAnalysisJSON(state, options = {}) {

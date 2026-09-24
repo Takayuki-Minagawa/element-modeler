@@ -15,6 +15,7 @@ import { isSlopedSurfaceType, isWallSurfaceType, normalizeGridSize } from './sta
 import { DEFAULT_ROOF_GROUP_ID, ZOOM_PERCENT_FACTOR } from './constants.js';
 import {
   computeMemberLengthM,
+  computeMemberSchedule,
   computeQuantitySummary,
   computeSurfaceSeismicWeightN,
   computeSurfaceWindProjectionM2,
@@ -698,6 +699,18 @@ export class UI {
           <td>${formatNumber(row.lengthM)}</td>
         </tr>
       `).join('');
+    const schedule = computeMemberSchedule(this.state);
+    const scheduleRows = schedule.rows
+      .map(row => `
+        <tr>
+          <td>${escapeHtml(t(row.type))}</td>
+          <td>${escapeHtml(row.sectionName || '-')}</td>
+          <td>${row.count}</td>
+          <td>${formatNumber(row.lengthM)}</td>
+          <td>${row.unitWeightKgPerM === null ? '-' : formatNumber(row.unitWeightKgPerM)}</td>
+          <td>${row.weightKg === null ? '-' : formatNumber(row.weightKg)}</td>
+        </tr>
+      `).join('');
     const surfaceDetailRows = (this.state.surfaces || [])
       .map(surface => {
         const wind = surface.includeWind !== false
@@ -773,6 +786,35 @@ export class UI {
           </tr>
         </tbody>
       </table>
+      ` : ''}
+      ${scheduleRows ? `
+      <h3 class="quantity-subtitle">${t('memberSchedule')}</h3>
+      <div class="quantity-detail-scroll">
+      <table class="quantity-table quantity-schedule-table">
+        <thead>
+          <tr>
+            <th>${t('propType')}</th>
+            <th>${t('memberScheduleSection')}</th>
+            <th>${t('quantityMemberCount')}</th>
+            <th>${t('quantityMemberLength')}</th>
+            <th>${t('memberScheduleUnitWeight')}</th>
+            <th>${t('memberScheduleWeight')}</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${scheduleRows}
+          <tr>
+            <th>${t('quantityTotal')}</th>
+            <th></th>
+            <th>${schedule.totals.count}</th>
+            <th>${formatNumber(schedule.totals.lengthM)}</th>
+            <th></th>
+            <th>${formatNumber(schedule.totals.weightKg)}</th>
+          </tr>
+        </tbody>
+      </table>
+      </div>
+      ${schedule.totals.unknownWeightCount ? `<p class="quantity-note">${escapeHtml(t('memberScheduleNoWeight', { count: schedule.totals.unknownWeightCount }))}</p>` : ''}
       ` : ''}
       <details class="quantity-detail">
         <summary>${t('quantitySurfaceDetails')}</summary>
