@@ -1,6 +1,6 @@
 # 座標入力・要素一覧の使い方
 
-Element Modeler v1.4.0。平面図での入力を中心に、人とブラウザー操作AIが同じフォームを使える構成です。
+Element Modeler v1.6.0。平面図での入力を中心に、人とブラウザー操作AIが同じフォームを使える構成です。
 
 ## 座標で部材を作成する
 
@@ -27,6 +27,18 @@ IDのボタンを押すと、未確定入力を解除し、その要素の階・
 対象の表示に必要なフィルタは解除されます。ここで座標や断面、荷重値、支点拘束などを編集できます。
 線材の始点と終点は、それぞれI端部・J端部のグループ内にあります。
 
+### 検索結果の線材を一括編集する
+
+1. 「要素の種類」で「線材」を選びます。
+2. 「線材種別で絞り込み」「断面で絞り込み」、階やID/断面検索を組み合わせます。断面は、その線材種別で使用中の名称から選べます。
+3. 「検索結果の線材 N 件を一括選択」を押します。表示中のページだけでなく、全ページの一致する線材が対象です。現在の選択は置き換わります。
+4. 平面入力とプロパティが開き、2件以上なら既存の一括断面変更・ミラーコピー・回転・配列複製・削除を利用できます。変更はUndo/Redoできます。
+
+非表示の線材も検索・選択対象です。選択時は必要な線材表示フィルタを解除し、対象が複数階にある場合は2Dレイヤー表示を「全レイヤー」にします。検索・選択そのものはモデル形状やUndo/Redoの履歴を変えません。
+一致件数が0の場合は一括選択できません。面材・荷重・支点はIDボタンから個別に選択します。
+
+「モデル」の階・通り芯管理と「解析」の荷重組合せ管理も、追加・編集・削除がUndo/Redoの対象です。管理画面を閉じて「元に戻す」「やり直す」を使います。空欄や不正な数値は変更前の値に戻り、履歴を消費しません。
+
 ## ブラウザー操作AI向けの参照
 
 まず画面のアクセシビリティ情報から役割と名前を取得します。
@@ -47,6 +59,8 @@ IDのボタンを押すと、未確定入力を解除し、その要素の階・
 | 要素一覧を開く | #menu-model-trigger → #btn-element-list |
 | 一覧 | dialog「要素一覧」、#element-table / table |
 | 一覧の絞り込み | #element-kind、#element-level、#element-search |
+| 線材の絞り込み | #element-member-type、#element-section（線材を選んだときのみ） |
+| 全ページの線材を選択 | #element-select-members / button「検索結果の線材 N 件を一括選択」 |
 | 一覧の行 | data-element-kind と data-element-id、IDを名前に含むbutton |
 | 右パネル | complementary「モデル情報」、各tabとtabpanel |
 | 表示切替 | #tab-2d、#tab-3dのaria-pressed |
@@ -67,5 +81,7 @@ Polygons close with the explicit Finish outline button. Measurement results and 
 
 Open **Model → Element list…** to search by ID or section, filter by kind/level, and page through 50 rows at a time.
 Select an ID to reveal its level and Properties. The list includes hidden elements and clears filters needed to reveal the selected target.
+Choose **Line**, then **Filter by member type** and **Filter by section**, and use **Select all N matching members** to replace the selection with matches from every page. Members from multiple levels are revealed in the plan. Use the existing batch controls in Properties to edit two or more members; edits support Undo/Redo.
+Level, grid-axis and load-combination management edits also support Undo/Redo after closing the modal. Unchanged or invalid numeric input preserves history.
 Use dialog/panel/group scope to distinguish repeated button names and the start/end coordinate fields.
 The stable IDs in the table above do not change with the language.

@@ -359,7 +359,7 @@ export class UI {
   refreshLevelSelectors() {
     const sortedLevels = [...this.state.levels].sort((a, b) => a.z - b.z);
     const layerHtml = sortedLevels
-      .map(l => `<option value="${l.id}">${l.name} (z=${l.z})</option>`)
+      .map(l => `<option value="${escapeHtml(l.id)}">${escapeHtml(l.name)} (z=${l.z})</option>`)
       .join('');
 
     const selActive = document.getElementById('sel-active-layer');

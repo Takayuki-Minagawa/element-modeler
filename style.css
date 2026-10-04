@@ -1236,7 +1236,7 @@ button:focus-visible, select:focus-visible, input:focus-visible, summary:focus-v
 .coordinate-input fieldset { border: 0; padding: 0; margin: 8px 0; min-width: 0; }
 .coordinate-fields { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 8px; }
 .coordinate-fields input { background: var(--bg); color: var(--text); border: 1px solid var(--border); border-radius: 3px; width: 100%; min-width: 0; padding: 6px; }
-.coordinate-input button, .element-pagination button, .element-table-wrap button { background: var(--bg); color: var(--text); border: 1px solid var(--border); border-radius: 4px; padding: 7px 9px; cursor: pointer; font: inherit; font-size: 12px; }
+.coordinate-input button, .element-pagination button, .element-table-wrap button, .element-actions button { background: var(--bg); color: var(--text); border: 1px solid var(--border); border-radius: 4px; padding: 7px 9px; cursor: pointer; font: inherit; font-size: 12px; }
 #btn-coordinate-add { width: 100%; margin-top: 9px; color: var(--accent); border-color: var(--accent); }
 .coordinate-actions { display: flex; flex-wrap: wrap; gap: 6px; }
 .coordinate-actions button { flex: 1; }
@@ -1245,6 +1245,9 @@ button:focus-visible, select:focus-visible, input:focus-visible, summary:focus-v
 .model-context p { margin: 0 0 5px; }
 .element-list-dialog { width: min(1000px, 94vw); }
 .element-filters { display: grid; grid-template-columns: 1fr 1fr 2fr; gap: 12px; }
+.element-member-filters { grid-template-columns: 1fr 1fr; margin-top: 12px; }
+.element-actions button { color: var(--accent); border-color: var(--accent); }
+.element-actions button:disabled { opacity: 0.5; cursor: default; }
 .element-filters label { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
 .element-filters input, .element-filters select { background: var(--bg); color: var(--text); border: 1px solid var(--border); border-radius: 3px; width: 100%; min-width: 0; padding: 7px; }
 .element-table-wrap { overflow-x: auto; }
@@ -1258,4 +1261,5 @@ button:focus-visible, select:focus-visible, input:focus-visible, summary:focus-v
 @media (width <= 800px) {
   .element-filters { grid-template-columns: 1fr 1fr; }
   .element-filters label:last-child { grid-column: 1 / -1; }
+  .element-member-filters label:last-child { grid-column: auto; }
 }

@@ -6,10 +6,10 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
-  <title>Element Modeler - Ver.1.5.0</title>
+  <title>Element Modeler - Ver.1.6.0</title>
   <link rel="help" href="docs/coordinate-input.md" type="text/markdown">
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
-  <link rel="stylesheet" href="style.css?v=1.5.0">
+  <link rel="stylesheet" href="style.css?v=1.6.0">
 </head>
 <body>
 <header id="app-header">
@@ -278,7 +278,7 @@
       <span id="status-zoom">Zoom: 100%</span>
       <span id="status-tool" data-i18n="toolMember">ツール: 線材</span>
       <div id="recovery-tools"></div>
-      <span id="status-version">Ver.1.5.0</span>
+      <span id="status-version">Ver.1.6.0</span>
     </footer>
   </main>
   <div id="property-resizer" class="side-resizer side-resizer-right" role="separator" aria-label="Resize properties" aria-orientation="vertical">
@@ -427,6 +427,14 @@
 <label><span data-i18n="elementKind">要素の種類</span><select id="element-kind"><option value="all" data-i18n="filterAll">すべて</option><option value="member" data-i18n="member">線材</option><option value="surface" data-i18n="surface">面材</option><option value="load" data-i18n="load">荷重</option><option value="support" data-i18n="support">支点</option></select></label>
 <label><span data-i18n="elementLevel">階で絞り込み</span><select id="element-level"></select></label>
 <label><span data-i18n="elementSearch">ID・断面を検索</span><input type="search" id="element-search"></label>
+</div>
+<div id="element-member-filters" hidden>
+<div class="element-filters element-member-filters">
+<label><span data-i18n="elementMemberType">線材種別で絞り込み</span><select id="element-member-type"><option value="all" data-i18n="filterAll">すべて</option><option value="beam" data-i18n="beam">梁</option><option value="column" data-i18n="column">柱</option><option value="hbrace" data-i18n="hbrace">水平ブレース</option><option value="vbrace" data-i18n="vbrace">鉛直ブレース</option></select></label>
+<label><span data-i18n="elementSection">断面で絞り込み</span><select id="element-section"></select></label>
+</div>
+<p class="tool-hint" data-i18n="elementSelectMembersHint"></p>
+<div class="element-actions"><button type="button" id="element-select-members" disabled></button></div>
 </div>
 <p id="element-list-count" role="status"></p>
 <div class="element-table-wrap"><table id="element-table"><caption class="sr-only" data-i18n="elementList">要素一覧</caption><thead><tr><th scope="col" data-i18n="elementId">要素ID</th><th scope="col" data-i18n="propType">種別</th><th scope="col" data-i18n="propLayer">階</th><th scope="col" data-i18n="propSection">断面</th><th scope="col" data-i18n="elementCoordinates">平面座標 (mm)</th></tr></thead><tbody id="element-rows"></tbody></table></div>
@@ -890,6 +898,6 @@
     }
   }
   </script>
-  <script type="module" src="js/app.js?v=1.5.0"></script>
+  <script type="module" src="js/app.js?v=1.6.0"></script>
 </body>
 </html>
