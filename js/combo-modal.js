@@ -3,8 +3,9 @@
 
 import { LOAD_CASES } from './constants.js';
 import { t } from './i18n.js';
+import { executeModelCommand } from './commands/model-command.js';
 
-export function initComboModal({ state, onModelChange }) {
+export function initComboModal({ state, history, onModelChange }) {
   const modal = document.getElementById('combo-modal');
   const listEl = document.getElementById('combo-list');
 
@@ -29,8 +30,10 @@ export function initComboModal({ state, onModelChange }) {
       nameInput.value = combo.name;
       nameInput.style.flex = '1';
       nameInput.addEventListener('change', () => {
-        state.updateLoadCombination(combo.id, { name: nameInput.value });
-        onModelChange();
+        const { changed } = executeModelCommand(history, state,
+          () => state.updateLoadCombination(combo.id, { name: nameInput.value }));
+        nameInput.value = state.loadCombinations.find(item => item.id === combo.id)?.name ?? combo.name;
+        if (changed) onModelChange();
       });
       row.appendChild(nameInput);
 
@@ -41,13 +44,18 @@ export function initComboModal({ state, onModelChange }) {
         factorInput.style.width = '52px';
         factorInput.value = combo.factors[loadCase] ?? 0;
         factorInput.addEventListener('change', () => {
-          const factors = { ...combo.factors };
-          const n = parseFloat(factorInput.value);
-          factors[loadCase] = Number.isFinite(n) ? n : 0;
-          state.updateLoadCombination(combo.id, { factors });
+          const current = state.loadCombinations.find(item => item.id === combo.id);
+          const n = Number(factorInput.value);
+          if (!factorInput.value.trim() || !Number.isFinite(n)) {
+            factorInput.value = current?.factors[loadCase] ?? 0;
+            return;
+          }
+          const factors = { ...current?.factors, [loadCase]: n };
+          const { changed } = executeModelCommand(history, state,
+            () => state.updateLoadCombination(combo.id, { factors }));
           factorInput.value = state.loadCombinations
             .find(c => c.id === combo.id)?.factors[loadCase] ?? 0;
-          onModelChange();
+          if (changed) onModelChange();
         });
         row.appendChild(factorInput);
       }
@@ -57,7 +65,9 @@ export function initComboModal({ state, onModelChange }) {
       delBtn.textContent = '×';
       delBtn.title = t('comboDelete');
       delBtn.addEventListener('click', () => {
-        state.removeLoadCombination(combo.id);
+        const { changed } = executeModelCommand(history, state,
+          () => state.removeLoadCombination(combo.id));
+        if (!changed) return;
         renderList();
         onModelChange();
       });
@@ -81,7 +91,9 @@ export function initComboModal({ state, onModelChange }) {
 
   document.getElementById('btn-combo-close').addEventListener('click', hide);
   document.getElementById('btn-combo-add').addEventListener('click', () => {
-    state.addLoadCombination(null, { DL: 1 });
+    const { changed } = executeModelCommand(history, state,
+      () => state.addLoadCombination(null, { DL: 1 }));
+    if (!changed) return;
     renderList();
     onModelChange();
   });

@@ -350,7 +350,10 @@ test('analysis results import, deformation scale, projection, target navigation 
   const uploadResult = value => page.locator('#analysis-result-file').setInputFiles({ name: 'result.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(value)) });
   await uploadResult(result);
   await expect(dialog.getByRole('img', { name: 'Structural preview XZ' })).toBeVisible();
-  await expect(dialog.locator('.analysis-output table tr')).toHaveCount(3);
+  const nodeTable = dialog.getByRole('table').filter({ has: page.getByRole('columnheader', { name: /^(Node|節点)$/ }) });
+  const memberTable = dialog.getByRole('table').filter({ has: page.getByRole('columnheader', { name: /^(Member \/ branch|部材 \/ 枝番)$/ }) });
+  await expect(nodeTable.getByRole('row')).toHaveCount(analysis.nodes.length + 1);
+  await expect(memberTable.getByRole('row')).toHaveCount(analysis.elements.length + 1);
   await reviewScreenshot(page, 'analysis-results');
   const deformed = dialog.locator('polyline[stroke="#168ce0"]');
   const before = await deformed.getAttribute('points');

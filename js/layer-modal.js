@@ -6,8 +6,9 @@
 import { t } from './i18n.js';
 import { markInputInvalid, clearInputInvalid } from './dom-utils.js';
 import { showNotice } from './notice.js';
+import { executeModelCommand } from './commands/model-command.js';
 
-export function initLayerModal({ state, onModelChange, refreshLevelSelectors }) {
+export function initLayerModal({ state, history, onModelChange, refreshLevelSelectors }) {
   const layerModal = document.getElementById('layer-modal');
   const layerListEl = document.getElementById('layer-list');
   const layerFormErrorEl = document.getElementById('layer-form-error');
@@ -63,9 +64,11 @@ export function initLayerModal({ state, onModelChange, refreshLevelSelectors }) 
       nameInput.value = level.name;
       nameInput.addEventListener('change', () => {
         clearInputInvalid(nameInput);
-        state.updateLevel(level.id, { name: nameInput.value });
-        refreshLevelSelectors();
+        const { changed } = executeModelCommand(history, state,
+          () => state.updateLevel(level.id, { name: nameInput.value }));
         clearLayerFormError();
+        if (!changed) return;
+        refreshLevelSelectors();
         onModelChange();
       });
 
@@ -75,16 +78,22 @@ export function initLayerModal({ state, onModelChange, refreshLevelSelectors }) 
       zInput.step = '100';
       zInput.addEventListener('change', () => {
         clearInputInvalid(zInput);
-        const newZ = parseFloat(zInput.value) || 0;
+        const newZ = Number(zInput.value);
+        if (!zInput.value.trim() || !Number.isFinite(newZ)) {
+          zInput.value = state.levels.find(item => item.id === level.id)?.z ?? level.z;
+          return;
+        }
         const duplicate = state.levels.some(l => l.id !== level.id && l.z === newZ);
         if (duplicate) {
           showLayerFormError(t('layerDuplicateZ'), zInput);
           zInput.value = level.z;
           return;
         }
-        state.updateLevel(level.id, { z: newZ });
-        refreshLevelSelectors();
+        const { changed } = executeModelCommand(history, state,
+          () => state.updateLevel(level.id, { z: newZ }));
         clearLayerFormError();
+        if (!changed) return;
+        refreshLevelSelectors();
         renderLayerList();
         onModelChange();
       });
@@ -113,7 +122,8 @@ export function initLayerModal({ state, onModelChange, refreshLevelSelectors }) 
           );
           return;
         }
-        state.removeLevel(level.id);
+        const { changed } = executeModelCommand(history, state, () => state.removeLevel(level.id));
+        if (!changed) return;
         refreshLevelSelectors();
         clearLayerFormError();
         renderLayerList();
@@ -155,7 +165,8 @@ export function initLayerModal({ state, onModelChange, refreshLevelSelectors }) 
       nextZ += 100;
     }
     const name = `${state.levels.length + 1}F`;
-    state.addLevel(name, nextZ);
+    const { changed } = executeModelCommand(history, state, () => state.addLevel(name, nextZ));
+    if (!changed) return;
     refreshLevelSelectors();
     renderLayerList();
     onModelChange();

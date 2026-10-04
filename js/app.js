@@ -569,12 +569,14 @@ const analysisSettingsModal = initAnalysisSettingsModal({
 
 const layerModal = initLayerModal({
   state,
+  history,
   onModelChange: update,
   refreshLevelSelectors: () => ui.refreshLevelSelectors(),
 });
 
 const axesModal = initAxesModal({
   state,
+  history,
   onModelChange: update,
 });
 
@@ -589,6 +591,7 @@ const gridFrameModal = initGridFrameModal({
 
 const comboModal = initComboModal({
   state,
+  history,
   onModelChange: update,
 });
 

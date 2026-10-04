@@ -2,8 +2,9 @@
 // Dependencies are injected through initAxesModal().
 
 import { t } from './i18n.js';
+import { executeModelCommand } from './commands/model-command.js';
 
-export function initAxesModal({ state, onModelChange }) {
+export function initAxesModal({ state, history, onModelChange }) {
   const modal = document.getElementById('axes-modal');
   const listEl = document.getElementById('axes-list');
 
@@ -35,7 +36,9 @@ export function initAxesModal({ state, onModelChange }) {
       dirSel.value = axis.dir;
       dirSel.style.width = '56px';
       dirSel.addEventListener('change', () => {
-        state.updateAxis(axis.id, { dir: dirSel.value });
+        const { changed } = executeModelCommand(history, state,
+          () => state.updateAxis(axis.id, { dir: dirSel.value }));
+        if (!changed) return;
         renderList();
         onModelChange();
       });
@@ -44,8 +47,10 @@ export function initAxesModal({ state, onModelChange }) {
       nameInput.type = 'text';
       nameInput.value = axis.name;
       nameInput.addEventListener('change', () => {
-        state.updateAxis(axis.id, { name: nameInput.value });
-        onModelChange();
+        const { changed } = executeModelCommand(history, state,
+          () => state.updateAxis(axis.id, { name: nameInput.value }));
+        nameInput.value = state.getAxis(axis.id)?.name ?? axis.name;
+        if (changed) onModelChange();
       });
 
       const coordInput = document.createElement('input');
@@ -54,12 +59,14 @@ export function initAxesModal({ state, onModelChange }) {
       coordInput.value = axis.coord;
       coordInput.style.width = '110px';
       coordInput.addEventListener('change', () => {
-        const value = parseFloat(coordInput.value);
-        if (!Number.isFinite(value)) {
-          coordInput.value = axis.coord;
+        const value = Number(coordInput.value);
+        if (!coordInput.value.trim() || !Number.isFinite(value)) {
+          coordInput.value = state.getAxis(axis.id)?.coord ?? axis.coord;
           return;
         }
-        state.updateAxis(axis.id, { coord: value });
+        const { changed } = executeModelCommand(history, state,
+          () => state.updateAxis(axis.id, { coord: value }));
+        if (!changed) return;
         renderList();
         onModelChange();
       });
@@ -69,7 +76,8 @@ export function initAxesModal({ state, onModelChange }) {
       delBtn.textContent = '×';
       delBtn.title = t('axisDelete');
       delBtn.addEventListener('click', () => {
-        state.removeAxis(axis.id);
+        const { changed } = executeModelCommand(history, state, () => state.removeAxis(axis.id));
+        if (!changed) return;
         renderList();
         onModelChange();
       });
@@ -87,7 +95,8 @@ export function initAxesModal({ state, onModelChange }) {
     const coord = siblings.length
       ? Math.max(...siblings.map(a => a.coord)) + (state.settings.gridSize || 1000)
       : 0;
-    state.addAxis(dir, null, coord);
+    const { changed } = executeModelCommand(history, state, () => state.addAxis(dir, null, coord));
+    if (!changed) return;
     renderList();
     onModelChange();
   }
