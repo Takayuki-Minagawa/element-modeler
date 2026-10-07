@@ -6,10 +6,10 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
-  <title>Element Modeler - Ver.1.6.1</title>
+  <title>Element Modeler - Ver.1.6.2</title>
   <link rel="help" href="docs/coordinate-input.md" type="text/markdown">
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
-  <link rel="stylesheet" href="style.css?v=1.6.1">
+  <link rel="stylesheet" href="style.css?v=1.6.2">
 </head>
 <body>
 <header id="app-header">
@@ -273,7 +273,6 @@
     <div id="canvas-container">
       <canvas id="canvas-2d" tabindex="0" aria-label="平面入力キャンバス"></canvas>
       <div id="viewer-3d" hidden></div>
-      <div id="viewer-tools" class="extension-tools viewer-overlay" hidden></div>
     </div>
 
     <!-- Status Bar -->
@@ -283,7 +282,7 @@
       <span id="status-zoom">Zoom: 100%</span>
       <span id="status-tool" data-i18n="toolMember">ツール: 線材</span>
       <div id="recovery-tools"></div>
-      <span id="status-version">Ver.1.6.1</span>
+      <span id="status-version">Ver.1.6.2</span>
     </footer>
   </main>
   <div id="property-resizer" class="side-resizer side-resizer-right" role="separator" aria-label="Resize properties" aria-orientation="vertical">
@@ -291,6 +290,7 @@
   </div>
 
 <aside id="property-panel" aria-label="モデル情報">
+<div id="viewer-tools" class="extension-tools viewer-sidebar" hidden></div>
 <div class="model-context"><p id="model-summary" role="status"></p><p id="selection-summary" role="status"></p></div>
 <div class="inspector-tabs" role="tablist" aria-label="モデル情報">
 <button type="button" id="inspector-properties-tab" role="tab" aria-selected="true" aria-controls="inspector-properties" data-inspector-tab="properties" data-i18n="properties">プロパティ</button>
@@ -903,6 +903,6 @@
     }
   }
   </script>
-  <script type="module" src="js/app.js?v=1.6.1"></script>
+  <script type="module" src="js/app.js?v=1.6.2"></script>
 </body>
 </html>
