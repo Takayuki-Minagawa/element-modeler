@@ -1,3 +1,6 @@
+import { fitPlanToPoints } from '../plan-camera.js';
+export { fitPlanToPoints } from '../plan-camera.js';
+
 // Diagnostic navigation changes the current view, never element geometry.
 export function focusIssue(state, canvas, issue) {
   const ref = issue.elementId !== null && issue.elementId !== undefined ? issue : issue.targets?.[0];
@@ -45,21 +48,4 @@ export function focusMembers(state, canvas, ids) {
   state.selectMembers(members.map(item => item.id));
   fitPlanToPoints(canvas, members.flatMap(item => [state.getNode(item.startNodeId), state.getNode(item.endNodeId)]));
   return true;
-}
-
-export function fitPlanToPoints(canvas, points) {
-  let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
-  for (const point of points) {
-    if (!Number.isFinite(point?.x) || !Number.isFinite(point?.y)) continue;
-    minX = Math.min(minX, point.x); maxX = Math.max(maxX, point.x);
-    minY = Math.min(minY, point.y); maxY = Math.max(maxY, point.y);
-  }
-  if (!Number.isFinite(minX)) return;
-  const width = canvas.logicalWidth || 600;
-  const height = canvas.logicalHeight || 400;
-  const spanX = Math.max(2000, maxX - minX);
-  const spanY = Math.max(2000, maxY - minY);
-  canvas.camera.scale = Math.max(0.005, Math.min(1, width * 0.7 / spanX, height * 0.7 / spanY));
-  canvas.camera.offsetX = width / 2 - (minX + maxX) / 2 * canvas.camera.scale;
-  canvas.camera.offsetY = height / 2 + (minY + maxY) / 2 * canvas.camera.scale;
 }

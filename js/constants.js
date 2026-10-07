@@ -1,7 +1,7 @@
 // constants.js - shared model / display constants (units in mm unless noted)
 
 // Kept in sync with package.json by scripts/version-sync.mjs.
-export const APP_VERSION = '1.6.0';
+export const APP_VERSION = '1.6.1';
 
 // Unit conversion
 export const MM_TO_M = 0.001;

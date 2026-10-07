@@ -2,6 +2,7 @@
 
 import { drawGrid } from './grid.js';
 import { FrameScheduler } from './render/frame-scheduler.js';
+import { clampPlanScale } from './plan-camera.js';
 import { RenderIndex, selectedElements, displayStamp } from './render/model-index.js';
 import { cssVar } from './dom-utils.js';
 import {
@@ -74,7 +75,9 @@ export class Canvas2D {
   }
 
   resize() {
-    if (this._disposed) return;
+    // The shared container grows when the plan toolbar is hidden in 3D.
+    // Retain the last visible plan viewport so hidden PNG exports keep its framing.
+    if (this._disposed || this.canvas.hidden) return;
     const parent = this.canvas.parentElement;
     const dpr = window.devicePixelRatio || 1;
     this.canvas.width = parent.clientWidth * dpr;
@@ -114,7 +117,7 @@ export class Canvas2D {
 
   zoom(delta, sx, sy) {
     const factor = delta > 0 ? 0.9 : 1.1;
-    const newScale = Math.max(0.005, Math.min(1, this.camera.scale * factor));
+    const newScale = clampPlanScale(this.camera.scale * factor);
     const ratio = newScale / this.camera.scale;
     this.camera.offsetX = sx - (sx - this.camera.offsetX) * ratio;
     this.camera.offsetY = sy - (sy - this.camera.offsetY) * ratio;
@@ -137,7 +140,7 @@ export class Canvas2D {
 
   setActive(active) {
     this._frames.setActive(active);
-    if (active) this.requestDraw();
+    if (active) this.resize();
   }
 
   dispose() {

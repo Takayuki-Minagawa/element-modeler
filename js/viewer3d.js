@@ -1194,6 +1194,15 @@ export class Viewer3D {
     this.requestRender();
   }
 
+  // A different model must not inherit element IDs or a clipping plane from
+  // the previous file. Frame on the next rebuild, including while hidden.
+  resetModelView() {
+    this.clearClipping();
+    this.clearIsolation();
+    this._pendingInitialCamera = true;
+    this.requestRebuild({ force: true });
+  }
+
   _applyIsolation() {
     for (const [key, objects] of this._visuals) {
       for (const object of objects) object.visible = !this._isolation || this._isolation.has(key);

@@ -12,6 +12,7 @@ import { Canvas2D } from './canvas2d.js';
 import { ToolManager } from './tools.js';
 import { UI } from './ui.js';
 import {
+  clearDXFUnderlay,
   exportAnalysisCSV,
   exportAnalysisJSON,
   exportCanvasPNG,
@@ -28,7 +29,7 @@ import { getHelpContent } from './help-content.js';
 import { invalidateCssVarCache } from './dom-utils.js';
 import { showNotice } from './notice.js';
 import { initWorkspace } from './ui/workspace.js';
-import { initPlanNavigation } from './ui/plan-navigation.js';
+import { fitVisiblePlan, initPlanNavigation } from './ui/plan-navigation.js';
 import { showInspector } from './ui/inspector.js';
 import { initSidePanels } from './side-panels.js';
 import { initUserDefModal } from './user-def-modal.js';
@@ -105,6 +106,7 @@ async function loadViewer3D() {
 }
 
 let activeView = '2d'; // '2d' | '3d'
+let fitPlanOnActivate = false;
 
 // --- Change-driven rendering ---
 
@@ -371,7 +373,10 @@ function activatePlanInput() {
   document.getElementById('viewer-tools').hidden = true;
   viewer3d?.setActive(false);
   canvas2d.setActive(true);
-  canvas2d.resize();
+  if (fitPlanOnActivate) {
+    fitVisiblePlan(state, canvas2d);
+    fitPlanOnActivate = false;
+  }
   update();
 }
 
@@ -495,7 +500,7 @@ document.getElementById('file-underlay-import')?.addEventListener('change', asyn
   const file = e.target.files[0];
   if (!file) return;
   try {
-    const { count } = await importDXFUnderlay(file, state);
+    const { count } = await importDXFUnderlay(file, state, history);
     state.updateSetting('showUnderlay', true);
     const chk = document.getElementById('chk-show-underlay');
     if (chk) chk.checked = true;
@@ -508,9 +513,13 @@ document.getElementById('file-underlay-import')?.addEventListener('change', asyn
 });
 
 document.getElementById('btn-underlay-clear')?.addEventListener('click', () => {
-  if (state.clearUnderlay()) {
-    update();
-    showNotice(t('underlayCleared'), 'success');
+  try {
+    if (clearDXFUnderlay(state, history)) {
+      update();
+      showNotice(t('underlayCleared'), 'success');
+    }
+  } catch (err) {
+    showNotice(err.message, 'error', 6500);
   }
 });
 
@@ -542,14 +551,28 @@ function syncSettingsControls() {
   ui.refreshToolState();
 }
 
+// A successful replacement starts a fresh interaction and frames its content.
+// Keep failures outside this boundary so unfinished work survives a bad file.
+// File imports, recovery, samples and generation all use the same UI reset.
+function completeModelLoad() {
+  toolManager.cancelPlacement();
+  toolManager.cancelPan({ releaseSpace: true });
+  syncSettingsControls();
+  ui.refreshLevelSelectors();
+  fitVisiblePlan(state, canvas2d);
+  // The hidden plan retains its last visible dimensions for PNG export.
+  // Fit once more against the live layout when returning from 3D.
+  fitPlanOnActivate = activeView === '3d';
+  viewer3d?.resetModelView();
+  update();
+}
+
 document.getElementById('file-import').addEventListener('change', async (e) => {
   const file = e.target.files[0];
   if (!file) return;
   try {
     await importJSON(file, state, history);
-    syncSettingsControls();
-    ui.refreshLevelSelectors();
-    update();
+    completeModelLoad();
     showNotice(t('cadImported'), 'success');
   } catch (err) {
     showNotice(t('importFailed') + err.message, 'error', 6500);
@@ -592,6 +615,7 @@ const gridFrameModal = initGridFrameModal({
   state,
   history,
   onModelChange: update,
+  onModelLoaded: completeModelLoad,
   syncSettingsControls,
   refreshLevelSelectors: () => ui.refreshLevelSelectors(),
   hideSettingsModal,
@@ -617,11 +641,7 @@ analysisWorkbench = initAnalysisWorkbench({
 const recoveryStartupRevision = state.revision;
 const autosave = initAutosave({
   state, history,
-  onRestore() {
-    syncSettingsControls();
-    ui.refreshLevelSelectors();
-    update();
-  },
+  onRestore: completeModelLoad,
 });
 recoveryUI = mountRecoveryUI({ autosave, host: document.getElementById('recovery-tools') });
 void autosave.ready.then(async ready => {
@@ -639,10 +659,8 @@ void autosave.ready.then(async ready => {
 function loadSample(sampleId) {
   try {
     applyModelImport(buildSampleModel(sampleId), state, history);
-    syncSettingsControls();
-    ui.refreshLevelSelectors();
     hideSettingsModal();
-    update();
+    completeModelLoad();
     showNotice(t('sampleLoaded'), 'success');
   } catch (err) {
     console.error('Sample load failed:', err);

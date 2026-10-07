@@ -4,6 +4,8 @@ import { AppState } from '../js/state.js';
 import { History } from '../js/history.js';
 import { createCatalogCommands } from '../js/ui/user-def/catalog-commands.js';
 import { renderCatalogTable } from '../js/ui/user-def/table.js';
+import { captureSnapshot } from '../js/persistence/snapshot.js';
+import { beginDrag, finishDrag, previewNode } from '../js/tools/drag-edit.js';
 
 class FileReaderShim {
   readAsText(file) {
@@ -182,6 +184,44 @@ test('import stages against current state after file read; intervening edits sur
   assert.equal(history.undoStack.length, 3);
   history.undo();
   assert.deepEqual(content(state), beforeImport);
+});
+
+test('pending catalog import rejects a provisional drag and succeeds after cancellation without resurrecting preview coordinates', async t => {
+  const { state, history, commands } = setup();
+  const node = state.addNode(100, 0);
+  history.transact(() => state.updateNode(node.id, { x: 200 }));
+  history.undo();
+  const committed = captureSnapshot(state);
+  const stacks = structuredClone([history.undoStack, history.redoStack]);
+  const payload = { userDefinitions: true, springs: [{ symbol: 'Imported' }] };
+  let resolveRead;
+  const pending = commands.importFile({ text: () => new Promise(resolve => { resolveRead = resolve; }) });
+  const manager = { state, history };
+  beginDrag(manager);
+  t.after(() => finishDrag(manager, false));
+  previewNode(manager, node.id, { x: 500 });
+  const preview = captureSnapshot(state);
+  const rejected = assert.rejects(pending, /finish or cancel.*edit/i);
+  resolveRead(JSON.stringify(payload));
+  await rejected;
+  assert.deepEqual(captureSnapshot(state), preview);
+  assert.deepEqual([history.undoStack, history.redoStack], stacks);
+  finishDrag(manager, false);
+  assert.deepEqual(captureSnapshot(state), committed);
+  assert.equal(history.redo(), true);
+  assert.equal(state.getNode(node.id).x, 200);
+
+  // Retry must stage against the latest committed state, not the old read or
+  // cancelled preview. Undoing the imported definitions keeps that geometry.
+  const beforeRetry = captureSnapshot(state);
+  assert.deepEqual(await commands.importFile(file(payload)), { added: 1, skipped: 0 });
+  assert.ok(state.getSpring('Imported'));
+  assert.equal(history.undo(), true);
+  assert.deepEqual({ ...captureSnapshot(state).data, revision: beforeRetry.data.revision }, beforeRetry.data);
+  assert.equal(state.getNode(node.id).x, 200);
+  assert.equal(history.redo(), true);
+  assert.ok(state.getSpring('Imported'));
+  assert.equal(state.getNode(node.id).x, 200);
 });
 
 test('catalog commands also work without history injection', async () => {

@@ -93,6 +93,29 @@ test('2D coalesces draw/input/resize, draws latest mutable previews, stops when 
   assert.equal(canvas.stats.frames, frames + 1);
 });
 
+test('hidden 2D exports retain the plan viewport and activation applies deferred layout changes', () => {
+  const { canvas, element, pending, observer, flush } = fixture();
+  flush();
+  const dimensions = () => [canvas.logicalWidth, canvas.logicalHeight, element.width, element.height];
+  const visibleDimensions = dimensions();
+  canvas.setActive(false);
+  element.hidden = true;
+  element.parentElement.clientHeight = 650;
+  observer.callback();
+  canvas.draw({ force: true });
+  assert.deepEqual(dimensions(), visibleDimensions);
+  assert.equal(pending.size, 0);
+
+  // A browser/panel resize in 3D is applied once the plan is shown again.
+  element.parentElement.clientWidth = 900;
+  element.parentElement.clientHeight = 700;
+  element.hidden = false;
+  canvas.setActive(true);
+  flush();
+  assert.deepEqual(dimensions(), [900, 700, 1800, 1400]);
+  canvas.dispose();
+});
+
 test('2D indexes replace linear searches and highlight endpoints of every selected member', () => {
   const { canvas, state, flush } = fixture();
   const a = state.addNode(0, 0), b = state.addNode(1000, 0), c = state.addNode(2000, 0);

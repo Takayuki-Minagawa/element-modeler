@@ -15,6 +15,8 @@ import {
 } from '../js/grid-frame-modal.js';
 import { AppState } from '../js/state.js';
 import { ToolManager } from '../js/tools.js';
+import { History } from '../js/history.js';
+import { beginDrag, finishDrag, previewNode } from '../js/tools/drag-edit.js';
 
 class FakeClassList {
   constructor() {
@@ -360,6 +362,38 @@ function dispatchSubmit(root) {
   root.getElementById('grid-frame-form').dispatchEvent(event);
   assert.equal(event.defaultPrevented, true);
 }
+
+test('grid generation cannot replace a model during a provisional drag', () =>
+  withFakeBrowser(root => {
+    const state = new AppState();
+    const node = state.addNode(100, 0);
+    const history = new History(state);
+    history.transact(() => state.updateNode(node.id, { x: 200 }));
+    history.undo();
+    const before = state.toJSON();
+    const undo = structuredClone(history.undoStack), redo = structuredClone(history.redoStack);
+    const manager = { state, history };
+    beginDrag(manager);
+    previewNode(manager, node.id, { x: 500 });
+    let loaded = false;
+    const controller = initModal(root, { state, history, onModelLoaded() { loaded = true; } });
+    controller.show();
+    setValidInputs(root);
+    try {
+      dispatchSubmit(root);
+      assert.equal(loaded, false);
+      assert.equal(controller.isOpen(), true);
+      assert.equal(state.getNode(node.id).x, 500);
+      assert.deepEqual(history.undoStack, undo);
+      assert.deepEqual(history.redoStack, redo);
+    } finally {
+      finishDrag(manager, false);
+    }
+    assert.deepEqual(state.toJSON(), before);
+    assert.equal(history.redo(), true);
+    assert.equal(state.getNode(node.id).x, 200);
+  })
+);
 
 test('initial grid frame modal exposes all inputs and actions', async () => {
   const html = await readFile(new URL('../index.html', import.meta.url), 'utf8');

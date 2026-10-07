@@ -495,6 +495,7 @@ test('3D geometry edits refresh clipping range and PNG exports current hidden 2D
   const afterExport = await canvasPixels(page);
   expect(afterExport.frames).toBeGreaterThan(hidden.frames);
   expect(exported).toEqual({ hash: afterExport.hash, width: afterExport.width, height: afterExport.height });
+  expect({ width: exported.width, height: exported.height }).toEqual({ width: before.width, height: before.height });
   expect(exported.hash).not.toBe(before.hash);
   await page.locator('#tab-2d').click();
   await expect.poll(async () => (await canvasPixels(page)).hash).toBe(exported.hash);

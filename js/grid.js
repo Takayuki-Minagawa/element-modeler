@@ -16,6 +16,7 @@ const LEGEND_LABEL_NUDGE = 5;
 // Origin marker (at the world origin), in screen px
 const ORIGIN_DOT_RADIUS = 4;
 const ORIGIN_VISIBLE_MARGIN = 20;
+const MIN_GRID_SPACING_PX = 12;
 
 export function drawGrid(ctx, camera, gridSize, canvasW, canvasH) {
   ctx.save();
@@ -27,6 +28,10 @@ export function drawGrid(ctx, camera, gridSize, canvasW, canvasH) {
 
 function drawGridLines(ctx, camera, gridSize, canvasW, canvasH) {
   const { offsetX, offsetY, scale } = camera;
+  if (!Number.isFinite(gridSize) || gridSize <= 0 || !Number.isFinite(scale) || scale <= 0) return;
+  // Draw an integer multiple of the configured grid at low zoom. Snapping
+  // still uses the original gridSize, while rendering stays bounded by pixels.
+  const spacing = gridSize * Math.max(1, Math.ceil(MIN_GRID_SPACING_PX / (gridSize * scale)));
 
   // Calculate visible world bounds
   const worldLeft = -offsetX / scale;
@@ -35,17 +40,17 @@ function drawGridLines(ctx, camera, gridSize, canvasW, canvasH) {
   const worldMaxY = offsetY / scale;
 
   // Grid line range
-  const startX = Math.floor(worldLeft / gridSize) * gridSize;
-  const endX = Math.ceil(worldRight / gridSize) * gridSize;
-  const startY = Math.floor(worldMinY / gridSize) * gridSize;
-  const endY = Math.ceil(worldMaxY / gridSize) * gridSize;
+  const startX = Math.floor(worldLeft / spacing);
+  const endX = Math.ceil(worldRight / spacing);
+  const startY = Math.floor(worldMinY / spacing);
+  const endY = Math.ceil(worldMaxY / spacing);
 
   ctx.strokeStyle = cssVar('--grid-line');
   ctx.lineWidth = 1;
 
   // Vertical lines
-  for (let x = startX; x <= endX; x += gridSize) {
-    const sx = x * scale + offsetX;
+  for (let index = startX; index <= endX; index++) {
+    const sx = index * spacing * scale + offsetX;
     ctx.beginPath();
     ctx.moveTo(sx, 0);
     ctx.lineTo(sx, canvasH);
@@ -53,8 +58,8 @@ function drawGridLines(ctx, camera, gridSize, canvasW, canvasH) {
   }
 
   // Horizontal lines
-  for (let y = startY; y <= endY; y += gridSize) {
-    const sy = offsetY - y * scale;
+  for (let index = startY; index <= endY; index++) {
+    const sy = offsetY - index * spacing * scale;
     ctx.beginPath();
     ctx.moveTo(0, sy);
     ctx.lineTo(canvasW, sy);
