@@ -3,6 +3,8 @@
 import { buildAnalysisCSV, buildAnalysisModel } from './analysis-export.js';
 import { buildDXF, parseDXF } from './dxf.js';
 import { applyModelImport } from './persistence/model-import.js';
+import { executeModelCommand, executeModelMutation } from './commands/model-command.js';
+import { hasProvisionalEdit } from './domain/provisional-edit.js';
 import {
   computeMemberLengthM,
   computeMemberSchedule,
@@ -219,8 +221,23 @@ export function exportCanvasPNG(canvas, state) {
   }, 'image/png');
 }
 
-// Reads a DXF file and installs it as the drawing underlay.
-export function importDXFUnderlay(file, state) {
+function changeUnderlay(state, history, mutate) {
+  if (hasProvisionalEdit(state)) {
+    throw new Error('Finish or cancel the current edit before changing the drawing underlay');
+  }
+  const outcome = history
+    ? executeModelCommand(history, state, mutate)
+    : executeModelMutation(state, mutate);
+  return outcome.changed;
+}
+
+export function clearDXFUnderlay(state, history = null) {
+  return changeUnderlay(state, history, () => state.clearUnderlay());
+}
+
+// Read and validate first, then capture the current model for Undo only when
+// the file is ready. Never capture a pending drag or discard intervening edits.
+export function importDXFUnderlay(file, state, history = null) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => {
@@ -230,7 +247,7 @@ export function importDXFUnderlay(file, state) {
           reject(new Error('No drawable entities found'));
           return;
         }
-        state.setUnderlay({ name: file.name, entities });
+        changeUnderlay(state, history, () => state.setUnderlay({ name: file.name, entities }));
         resolve({ count: entities.length });
       } catch (err) {
         reject(err);

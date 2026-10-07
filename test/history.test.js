@@ -82,6 +82,25 @@ test('save clears the redo stack', () => {
   assert.equal(history.redo(), false);
 });
 
+test('restore context follows its operation across undo/redo and is absent from model snapshots', () => {
+  const state = new AppState();
+  const history = new History(state);
+  const contexts = [];
+  history.setOnRestore(context => contexts.push(context));
+  history.save('model-replacement');
+  state.addNode(1000, 0);
+  history.transact(() => state.addNode(2000, 0));
+  history.transact(() => false, 'unused');
+  history.undo(); history.undo(); history.redo(); history.redo();
+  assert.deepEqual(contexts, [null, 'model-replacement', 'model-replacement', null]);
+  assert.equal(JSON.stringify(state.toJSON()).includes('model-replacement'), false);
+  assert.equal(JSON.stringify(history.undoStack).includes('model-replacement'), false);
+  contexts.length = 0;
+  history.transact(() => state.addNode(3000, 0), 'model-replacement');
+  history.undo(); history.redo(); history.undo();
+  assert.deepEqual(contexts, ['model-replacement', 'model-replacement', 'model-replacement']);
+});
+
 test('undo history is capped at MAX_HISTORY snapshots (oldest dropped)', () => {
   const state = new AppState();
   const history = new History(state);

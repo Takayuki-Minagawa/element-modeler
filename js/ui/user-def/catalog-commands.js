@@ -1,4 +1,5 @@
 import { importUserDefs } from '../../io.js';
+import { hasProvisionalEdit } from '../../domain/provisional-edit.js';
 
 // Catalog edits can also propagate section properties to placed elements.
 const CONTENT_FIELDS = ['materialCatalog', 'springCatalog', 'sectionCatalog', 'members', 'surfaces'];
@@ -18,6 +19,11 @@ export function createCatalogCommands({ state, history = null }) {
   function commit(staged, result) {
     const fields = changedFields(state, staged);
     if (!fields.length) return undefined;
+    // A file read can finish after the catalog dialog closes and a drag
+    // starts. Never retain those temporary coordinates in catalog Undo.
+    if (hasProvisionalEdit(state)) {
+      throw new Error('Finish or cancel the current edit before changing user definitions');
+    }
     const apply = () => {
       for (const key of fields) state[key] = staged[key];
       state.revision = staged.revision;

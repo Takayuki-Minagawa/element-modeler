@@ -14,6 +14,7 @@ import { modelHasContent } from './autosave.js';
 import { t } from './i18n.js';
 import { showNotice } from './notice.js';
 import { createDefaultLevels } from './state.js';
+import { hasProvisionalEdit } from './domain/provisional-edit.js';
 
 const PARSE_ERROR_KEYS = {
   empty: 'gridFrameEmptyInput',
@@ -208,6 +209,11 @@ export function initGridFrameModal({
   syncSettingsControls,
   refreshLevelSelectors,
   hideSettingsModal = () => {},
+  onModelLoaded = () => {
+    syncSettingsControls();
+    refreshLevelSelectors();
+    onModelChange();
+  },
 }) {
   const modal = document.getElementById('grid-frame-modal');
   const form = document.getElementById('grid-frame-form');
@@ -553,7 +559,9 @@ export function initGridFrameModal({
     settingsModal?.setAttribute('inert', '');
     modal.classList.add('visible');
     modal.setAttribute('aria-hidden', 'false');
-    requestAnimationFrame(() => storyCountInput.focus());
+    // The modal is visible now. A deferred focus can steal the next keystroke
+    // after the user has already moved to a span or section input.
+    storyCountInput.focus();
   }
 
   function hide({ restoreFocus = true } = {}) {
@@ -563,7 +571,7 @@ export function initGridFrameModal({
     modal.setAttribute('aria-hidden', 'true');
     settingsModal?.removeAttribute('inert');
     if (restoreFocus && returnFocusElement?.isConnected) {
-      requestAnimationFrame(() => returnFocusElement.focus());
+      returnFocusElement.focus();
     }
   }
 
@@ -677,16 +685,17 @@ export function initGridFrameModal({
 
     let snapshotSaved = false;
     try {
-      history.save();
+      if (hasProvisionalEdit(state)) {
+        throw new Error('Finish or cancel the current edit before generating a new model');
+      }
+      history.save('model-replacement');
       snapshotSaved = true;
       state.loadJSON(generatedModel);
-      syncSettingsControls();
-      refreshLevelSelectors();
       hide({ restoreFocus: false });
       hideSettingsModal();
-      onModelChange();
+      onModelLoaded();
       writeStorage(GRID_FRAME_INPUT_STORAGE_KEY, inputValues);
-      requestAnimationFrame(() => document.getElementById('btn-settings')?.focus());
+      document.getElementById('btn-settings')?.focus();
 
       // The foundation is the only level below GL, so it is always the lowest
       // one; its members are reported separately from the frame above.
