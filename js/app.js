@@ -28,6 +28,7 @@ import { getHelpContent } from './help-content.js';
 import { invalidateCssVarCache } from './dom-utils.js';
 import { showNotice } from './notice.js';
 import { initWorkspace } from './ui/workspace.js';
+import { initPlanNavigation } from './ui/plan-navigation.js';
 import { showInspector } from './ui/inspector.js';
 import { initSidePanels } from './side-panels.js';
 import { initUserDefModal } from './user-def-modal.js';
@@ -70,6 +71,7 @@ let viewerToolsState = null;
 let recoveryUI = null;
 let analysisWorkbench = null;
 let workspace = null;
+let planNavigation = null;
 
 async function loadViewer3D() {
   if (viewer3d) return viewer3d;
@@ -328,6 +330,7 @@ history.setOnRestore(() => {
 // --- Tools ---
 
 toolManager = new ToolManager(canvas2d, state, history, update, {
+  onPanModeChange() { planNavigation?.refresh(); },
   onTemporaryToolChange() {
     ui.refreshToolState();
   },
@@ -338,6 +341,8 @@ toolManager = new ToolManager(canvas2d, state, history, update, {
     showNotice(t('splitMemberFailed'), 'error');
   },
 });
+
+planNavigation = initPlanNavigation({ state, canvas2d, toolManager, onUpdate: update });
 
 // --- Side Panels ---
 
@@ -361,6 +366,7 @@ function activatePlanInput() {
   tab2d.setAttribute('aria-pressed', 'true');
   tab3d.setAttribute('aria-pressed', 'false');
   canvasEl.hidden = false;
+  planNavigation.setVisible(true);
   viewerContainer.hidden = true;
   document.getElementById('viewer-tools').hidden = true;
   viewer3d?.setActive(false);
@@ -378,6 +384,8 @@ tab3d.addEventListener('click', async () => {
   tab2d.setAttribute('aria-pressed', 'false');
   tab3d.setAttribute('aria-pressed', 'true');
   canvasEl.hidden = true;
+  toolManager.cancelPan({ releaseSpace: true });
+  planNavigation.setVisible(false);
   canvas2d.setActive(false);
   viewerContainer.hidden = false;
   document.getElementById('viewer-tools').hidden = false;
@@ -676,6 +684,7 @@ function applyTheme(theme) {
 function applyLang(lang) {
   setLang(lang);
   ui.applyLanguage();
+  planNavigation?.refresh();
   if (settingsLangSelect) settingsLangSelect.value = lang;
   applyI18nTo(settingsModal);
   gridFrameModal.applyLanguage();

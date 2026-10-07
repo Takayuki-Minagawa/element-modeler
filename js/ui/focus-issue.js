@@ -47,7 +47,7 @@ export function focusMembers(state, canvas, ids) {
   return true;
 }
 
-function fitPlanToPoints(canvas, points) {
+export function fitPlanToPoints(canvas, points) {
   let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
   for (const point of points) {
     if (!Number.isFinite(point?.x) || !Number.isFinite(point?.y)) continue;

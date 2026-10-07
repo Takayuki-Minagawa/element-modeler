@@ -1168,6 +1168,13 @@ button:focus-visible, select:focus-visible, input:focus-visible, summary:focus-v
 .input-footer p { color: var(--text-dim); font-size: 10px; line-height: 1.7; margin-bottom: 10px; }
 .input-footer button { width: 100%; background: transparent; }
 #workspace-context { display: flex; align-items: center; gap: 12px; padding: 7px 14px; min-height: 40px; background: var(--surface); border-bottom: 1px solid var(--border); font-size: 12px; }
+#plan-navigation { display: flex; flex: 0 0 auto; flex-wrap: wrap; align-items: center; gap: 6px 10px; padding: 6px 14px; background: var(--surface); border-bottom: 1px solid var(--border); }
+#plan-navigation button { flex: 0 0 auto; padding: 5px 9px; background: transparent; color: var(--text); border: 1px solid var(--border); border-radius: 4px; cursor: pointer; font-size: 12px; }
+#plan-navigation button:hover { border-color: var(--accent); }
+#plan-navigation button[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); background: var(--hover-bg); }
+#plan-navigation-hint { color: var(--text-dim); font-size: 11px; }
+#canvas-2d.pan-ready { cursor: grab; }
+#canvas-2d.is-panning { cursor: grabbing; }
 #context-level { font-weight: 600; }
 #context-tool { color: var(--accent); }
 .history-actions { display: flex; gap: 4px; margin-left: auto; }
@@ -1182,7 +1189,30 @@ button:focus-visible, select:focus-visible, input:focus-visible, summary:focus-v
 .inspector-actions { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 12px; }
 .inspector-primary { width: 100%; margin-bottom: 12px; }
 .empty-selection-guide { color: var(--text-dim); line-height: 1.9; font-size: 12px; padding-top: 12px; }
-.viewer-overlay { position: absolute; top: 12px; right: 12px; max-width: min(240px, 45%); max-height: calc(100% - 24px); overflow: auto; background: var(--surface); border-radius: 6px; padding: 0 6px; opacity: 0.96; }
+.viewer-overlay {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  display: flex;
+  width: 260px;
+  max-width: calc(100% - 24px);
+  max-height: calc(100% - 24px);
+  overflow: hidden;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+.viewer-tools-panel { display: flex; flex-direction: column; min-width: 0; width: 100%; }
+.viewer-tools-header { display: flex; flex-shrink: 0; align-items: center; gap: 4px; padding: 4px; }
+.viewer-tools-header button { margin: 0; min-height: 30px; border-color: transparent; }
+.viewer-tools-header button:hover { background: var(--hover-bg); }
+.viewer-tools-header button:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.viewer-tools-drag { display: flex; align-items: center; gap: 6px; flex: 1; min-width: 0; text-align: left; cursor: grab; touch-action: none; user-select: none; }
+.viewer-tools-drag.is-dragging { cursor: grabbing; }
+.viewer-tools-grip { color: var(--text-dim); }
+.viewer-tools-toggle { flex: 0 0 30px; cursor: pointer; }
+.viewer-overlay .viewer-tools-content { min-height: 0; overflow: auto; overscroll-behavior: contain; margin: 0; padding: 4px 10px 8px; border: 0; border-top: 1px solid var(--border); border-radius: 0; }
 .workspace-dialog { width: min(420px, 92vw); padding: 0; }
 .workspace-dialog .grid-label { flex-direction: column; align-items: stretch; gap: 6px; padding: 8px 0; }
 .workspace-dialog .tool-filter-group { border: 0; }

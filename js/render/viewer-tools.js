@@ -1,11 +1,14 @@
 // Optional standalone UI. Parent supplies its host and routes errors to notices.
 // No dependency on app.js, i18n.js, or a particular toolbar layout.
+import { mountViewerToolsPanel } from './viewer-tools-panel.js';
+
 export function mountViewerTools(host, viewer, { language = 'en', onError = console.error } = {}) {
   const ja = language === 'ja';
   const doc = host.ownerDocument;
   const root = doc.createElement('fieldset');
   const legend = doc.createElement('legend');
   legend.textContent = ja ? '3D表示・出力' : '3D view and export';
+  legend.className = 'sr-only';
   root.append(legend);
   const listeners = [];
   const listen = (el, type, handler) => { el.addEventListener(type, handler); listeners.push(() => el.removeEventListener(type, handler)); };
@@ -86,12 +89,12 @@ export function mountViewerTools(host, viewer, { language = 'en', onError = cons
   const note = doc.createElement('small');
   note.textContent = ja ? '表示対象をm単位で出力。切断面は開口、色は元の要素色。' : 'Exports displayed elements in meters, with open cut faces and original element colors.';
   root.append(status, note);
-  host.append(root);
+  const panel = mountViewerToolsPanel(host, root, { title: legend.textContent, language });
   refresh();
   return { refresh, dispose() {
     disposed = true;
     for (const remove of listeners) remove();
     if (downloadUrl) URL.revokeObjectURL(downloadUrl);
-    root.remove();
+    panel.dispose();
   } };
 }

@@ -264,6 +264,11 @@
     </nav>
 
     <div id="workspace-context"><span id="context-level"></span><span id="context-tool"></span><div class="history-actions"><button type="button" data-history="undo" data-i18n="menuUndo">元に戻す</button><button type="button" data-history="redo" data-i18n="menuRedo">やり直す</button></div></div>
+    <div id="plan-navigation" role="group" aria-label="平面表示の操作">
+      <button type="button" id="btn-plan-pan" aria-pressed="false" aria-describedby="plan-navigation-hint">画面移動</button>
+      <button type="button" id="btn-plan-fit">中央に表示</button>
+      <span id="plan-navigation-hint"></span>
+    </div>
     <!-- Canvas Container -->
     <div id="canvas-container">
       <canvas id="canvas-2d" tabindex="0" aria-label="平面入力キャンバス"></canvas>

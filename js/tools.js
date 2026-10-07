@@ -63,6 +63,9 @@ export class ToolManager {
     this._isPanning = false;
     this._panStart = null;
     this._spaceDown = false;
+    this.panMode = false;
+    this._panButton = null;
+    this._panViaSpace = false;
 
     // Draw tool states
     this._memberStart = null;
@@ -162,6 +165,30 @@ export class ToolManager {
     return true;
   }
 
+  // Navigation is independent of the modeling tool, selection and history.
+  setPanMode(active) {
+    this.cancelPan();
+    this.panMode = Boolean(active);
+    if (this.panMode) this.cancelDrag();
+    this._updatePanCursor();
+    this.callbacks?.onPanModeChange?.(this.panMode);
+  }
+
+  cancelPan({ releaseSpace = false } = {}) {
+    this._isPanning = false;
+    this._panStart = null;
+    this._panButton = null;
+    this._panViaSpace = false;
+    if (releaseSpace) this._spaceDown = false;
+    this._updatePanCursor();
+  }
+
+  _updatePanCursor() {
+    const classes = this.canvas2d?.canvas?.classList;
+    classes?.toggle('pan-ready', this.panMode || this._spaceDown);
+    classes?.toggle('is-panning', this._isPanning);
+  }
+
   _setupEvents() {
     const el = this.canvas2d.canvas;
 
@@ -173,8 +200,16 @@ export class ToolManager {
 
     window.addEventListener('keydown', e => this._onKeyDown(e));
     window.addEventListener('keyup', e => this._onKeyUp(e));
-    window.addEventListener('blur', () => this.cancelDrag());
+    el.addEventListener('pointercancel', () => this.cancelPan({ releaseSpace: true }));
+    window.addEventListener('blur', () => {
+      this.cancelPan({ releaseSpace: true });
+      this.cancelDrag();
+    });
+    window.addEventListener('mousemove', e => {
+      if (this._isPanning && e.target !== el) this._onMouseMove(e);
+    });
     window.addEventListener('mouseup', e => {
+      if (this._isPanning) this.cancelPan();
       if (this._dragTarget || this._marqueeStart) this._selectUp(e);
     });
   }
@@ -244,10 +279,13 @@ export class ToolManager {
   _onMouseDown(e) {
     const { sx, sy } = this._getScreenPos(e);
 
-    // Pan: middle button, right button, or space+left
-    if (e.button === 1 || e.button === 2 || (e.button === 0 && this._spaceDown)) {
+    // Pan takes precedence over picking/drawing, including on top of a member.
+    if (e.button === 1 || e.button === 2 || (e.button === 0 && (this.panMode || this._spaceDown))) {
       this._isPanning = true;
       this._panStart = { x: sx, y: sy };
+      this._panButton = e.button;
+      this._panViaSpace = e.button === 0 && this._spaceDown && !this.panMode;
+      this._updatePanCursor();
       e.preventDefault();
       return;
     }
@@ -279,11 +317,20 @@ export class ToolManager {
 
     // Pan
     if (this._isPanning && this._panStart) {
+      // A release outside the browser can omit mouseup. Do not keep panning
+      // when the pointer returns with its initiating button released.
+      const buttonMask = [1, 4, 2][this._panButton];
+      if (typeof e.buttons === 'number' && !(e.buttons & buttonMask)) {
+        this.cancelPan();
+        return;
+      }
       this.canvas2d.pan(sx - this._panStart.x, sy - this._panStart.y);
       this._panStart = { x: sx, y: sy };
       this.onUpdate();
       return;
     }
+
+    if (this.panMode || this._spaceDown) return;
 
     const tool = this.state.currentTool;
 
@@ -307,10 +354,11 @@ export class ToolManager {
 
   _onMouseUp(e) {
     if (this._isPanning) {
-      this._isPanning = false;
-      this._panStart = null;
+      this.cancelPan();
       return;
     }
+
+    if (this.panMode) return;
 
     if (this.state.currentTool === 'select') {
       this._selectUp(e);
@@ -327,12 +375,22 @@ export class ToolManager {
   _onKeyDown(e) {
     if (blocksCadShortcut(e)) return;
     if (e.code === 'Space') {
+      // Keep native Space activation for buttons/links and the 3D viewer.
+      if (this.canvas2d?.canvas?.hidden || e.target?.closest?.('button, a[href], [role="button"]') ||
+          e.ctrlKey || e.metaKey || e.altKey) return;
       this._spaceDown = true;
+      this._updatePanCursor();
       e.preventDefault();
     }
 
     // Esc: cancel or deselect
     if (e.key === 'Escape') {
+      if (this.panMode || this._isPanning) {
+        this.cancelPan({ releaseSpace: true });
+        this.setPanMode(false);
+        e.preventDefault();
+        return;
+      }
       if (this.cancelDrag()) return;
       if (this.state.currentTool === 'splitPoint' || this._splitPointMemberId) {
         e.preventDefault();
@@ -383,6 +441,7 @@ export class ToolManager {
 
   // Shared by toolbar commands and tool changes; preserves model selection.
   cancelPlacement() {
+    this.setPanMode(false);
     this.cancelDrag();
     this.cancelSplitPoint({ update: false });
     this._memberStart = null;
@@ -472,6 +531,8 @@ export class ToolManager {
   _onKeyUp(e) {
     if (e.code === 'Space') {
       this._spaceDown = false;
+      if (this._panViaSpace) this.cancelPan();
+      this._updatePanCursor();
     }
   }
 

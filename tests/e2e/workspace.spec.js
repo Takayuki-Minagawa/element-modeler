@@ -144,7 +144,8 @@ for (const width of [1440, 1024, 768]) {
     const initiallyCollapsed = await page.locator('body').evaluate(el => el.classList.contains('property-collapsed'));
     if (!initiallyCollapsed) await page.locator('#btn-toggle-property').click();
     await expect(page.locator('#canvas-2d')).toBeVisible();
-    expect((await page.locator('#canvas-2d').boundingBox()).width).toBeGreaterThan(width / 2);
+    // Canvas dimensions follow the panel layout on the next resize frame.
+    await expect.poll(async () => (await page.locator('#canvas-2d').boundingBox()).width).toBeGreaterThan(width / 2);
     if (test.info().project.name === 'chromium') {
       if (!initiallyCollapsed) await page.locator('#btn-toggle-property').click();
       await mkdir('test-results/ui-review', { recursive: true });
