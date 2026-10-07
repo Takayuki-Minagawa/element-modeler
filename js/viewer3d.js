@@ -100,7 +100,8 @@ export class Viewer3D {
 
     // Click-to-select support: app.js sets onPick to receive {kind, id}.
     this.onPick = null;
-    this._pointerDownPos = null;
+    this._pickPointers = new Map();
+    this._pickGesture = null;
     this._raycaster = null;
 
     // Shared material caches keyed by color/opacity so identical surfaces,
@@ -133,12 +134,8 @@ export class Viewer3D {
     this.renderer.clippingPlanes = this._clipPlane ? [this._clipPlane] : [];
     this.container.appendChild(this.renderer.domElement);
 
-    this.controls = new OrbitControls(this.camera, this.renderer.domElement);
-    this.controls.enableDamping = true;
-    this.controls.dampingFactor = 0.1;
-    this.controls.enablePan = false;
     this._onControlsChange = () => this.requestRender();
-    this.controls.addEventListener('change', this._onControlsChange);
+    this.controls = this._createOrbitControls();
     this._setFallbackObliqueView();
 
     this.ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
@@ -172,20 +169,102 @@ export class Viewer3D {
     this._resizeObserver.observe(this.container);
 
     this._raycaster = new THREE.Raycaster();
-    this._onPointerDown = e => {
-      if (e.button === 0) this._pointerDownPos = { x: e.clientX, y: e.clientY };
+    this._onPointerDown = e => this._beginPickGesture(e);
+    this._onPointerMove = e => this._movePickGesture(e);
+    this._onPointerUp = e => this._endPickGesture(e);
+    this._onPointerCancel = e => this._cancelPickGesture(e);
+    this._onLostPointerCapture = e => this._lostPickPointerCapture(e);
+    this._onWindowBlur = () => this._cancelPointerInteraction();
+    this._onVisibilityChange = () => {
+      if (this._eventDocument.hidden) this._cancelPointerInteraction();
     };
-    this._onPointerUp = e => {
-      const down = this._pointerDownPos;
-      this._pointerDownPos = null;
-      if (!down || e.button !== 0) return;
-      if (Math.hypot(e.clientX - down.x, e.clientY - down.y) > PICK_CLICK_MAX_PX) return;
-      this._pickAt(e.clientX, e.clientY);
-    };
-    this._onPointerCancel = () => { this._pointerDownPos = null; };
+    this._eventDocument = this.renderer.domElement.ownerDocument;
+    this._eventWindow = this._eventDocument.defaultView;
     this.renderer.domElement.addEventListener('pointerdown', this._onPointerDown);
+    this.renderer.domElement.addEventListener('pointermove', this._onPointerMove);
     this.renderer.domElement.addEventListener('pointerup', this._onPointerUp);
     this.renderer.domElement.addEventListener('pointercancel', this._onPointerCancel);
+    this.renderer.domElement.addEventListener('lostpointercapture', this._onLostPointerCapture);
+    this._eventWindow.addEventListener('blur', this._onWindowBlur);
+    this._eventDocument.addEventListener('visibilitychange', this._onVisibilityChange);
+  }
+
+  _createOrbitControls(target = null) {
+    const position = this.camera.position.clone();
+    const controls = new OrbitControls(this.camera, this.renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.1;
+    controls.enablePan = true;
+    controls.zoomToCursor = true;
+    if (target) {
+      this.camera.position.copy(position);
+      controls.target.copy(target);
+      controls.update();
+    }
+    controls.addEventListener('change', this._onControlsChange);
+    return controls;
+  }
+
+  _cancelPointerInteraction() {
+    if (!this._pickPointers.size) return;
+    this._pickPointers.clear();
+    this._pickGesture = null;
+    if (!this.controls || this._disposed) return;
+    const target = this.controls.target.clone();
+    this.controls.removeEventListener('change', this._onControlsChange);
+    this.controls.dispose();
+    // r170 has no public gesture-cancel API. Recreate controls to discard its
+    // stale pointer IDs as well, without a synthetic release on inactive IDs.
+    this.controls = this._createOrbitControls(target);
+  }
+
+  _lostPickPointerCapture(event) {
+    const pointer = this._pickPointers.get(event.pointerId);
+    if (!pointer) return;
+    // Let every normal pointerup listener finish, including when controls
+    // releases capture before our picking listener runs. Only an abandoned
+    // pointer that is still the same gesture requires a reset.
+    Promise.resolve().then(() => {
+      if (this._pickPointers.get(event.pointerId) === pointer) this._cancelPointerInteraction();
+    });
+  }
+
+  _beginPickGesture(event) {
+    const singlePointer = this._pickPointers.size === 0;
+    this._pickPointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+    this._pickGesture = singlePointer && event.button === 0 && event.isPrimary !== false &&
+      !event.ctrlKey && !event.metaKey && !event.shiftKey && !event.altKey
+      ? { pointerId: event.pointerId, distance: 0 } : null;
+  }
+
+  _movePickGesture(event) {
+    const previous = this._pickPointers.get(event.pointerId);
+    if (!previous) return;
+    const gesture = this._pickGesture;
+    if (gesture?.pointerId === event.pointerId) {
+      // Total travel also rejects an orbit that returns to its starting point.
+      gesture.distance += Math.hypot(event.clientX - previous.x, event.clientY - previous.y);
+      if (gesture.distance > PICK_CLICK_MAX_PX || event.buttons > 1 ||
+          event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) {
+        this._pickGesture = null;
+      }
+    }
+    previous.x = event.clientX;
+    previous.y = event.clientY;
+  }
+
+  _endPickGesture(event) {
+    this._movePickGesture(event);
+    this._pickPointers.delete(event.pointerId);
+    const gesture = this._pickGesture;
+    if (gesture?.pointerId !== event.pointerId) return;
+    this._pickGesture = null;
+    if (event.button === 0 && this._pickPointers.size === 0) this._pickAt(event.clientX, event.clientY);
+  }
+
+  _cancelPickGesture(event) {
+    this._pickPointers.delete(event.pointerId);
+    this._pickGesture = null;
   }
 
   // Raycasts the member/surface groups at the given client position and
@@ -300,31 +379,38 @@ export class Viewer3D {
   }
 
   _setFallbackObliqueView() {
-    this._setInitialObliqueViewToTarget(new THREE.Vector3(0, 0, 0), 10);
+    this._fitContentBox(new THREE.Box3(new THREE.Vector3(-5, 0, -5), new THREE.Vector3(5, 0, 5)),
+      new THREE.Vector3(1, 0.8, 1));
   }
 
-  _setInitialObliqueViewToTarget(target, span) {
-    const distance = Math.max(3, span * 1.5);
-    const dir = new THREE.Vector3(1, 0.8, 1).normalize();
-    const position = target.clone().addScaledVector(dir, distance);
-    this.camera.position.copy(position);
-    this.camera.up.set(0, 1, 0);
-    this.controls.target.copy(target);
-    this.camera.lookAt(target);
-    this.controls.update();
-  }
-
-  _computeContentBounds() {
+  _computeContentBounds({ picks = null, clipped = false, visibleOnly = true, includeNodes = false } = {}) {
     const box = new THREE.Box3();
-    let hasContent = false;
-    for (const group of [this.surfaceGroup, this.memberGroup, this.nodeGroup, this.loadGroup, this.supportGroup]) {
-      if (!group || group.children.length === 0) continue;
-      const gbox = new THREE.Box3().setFromObject(group);
-      if (!Number.isFinite(gbox.min.x) || !Number.isFinite(gbox.max.x)) continue;
-      box.union(gbox);
-      hasContent = true;
+    const entries = picks
+      ? picks.map(pick => [`${pick.kind}:${pick.id}`, this._visuals.get(`${pick.kind}:${pick.id}`) || []])
+      : this._visuals;
+    const equation = clipped && this.clipping
+      ? clippingEquation(this.clipping.axis, this.clipping.positionMm, this.clipping.flipped) : null;
+    const clipIndex = equation?.normal.findIndex(n => n !== 0);
+    const clipAxis = equation ? ['x', 'y', 'z'][clipIndex] : null;
+    for (const [key, objects] of entries) {
+      // Standalone nodes and decorative helpers must not enlarge whole-model fit.
+      if (!picks && !includeNodes && key.startsWith('node:')) continue;
+      for (const object of objects) {
+        let visible = true;
+        for (let ancestor = object; ancestor; ancestor = ancestor.parent) visible &&= ancestor.visible;
+        if (visibleOnly && !visible) continue;
+        const objectBox = new THREE.Box3().setFromObject(object);
+        if (![...objectBox.min.toArray(), ...objectBox.max.toArray()].every(Number.isFinite)) continue;
+        if (equation) {
+          const cut = -equation.constant / equation.normal[clipIndex];
+          if (equation.normal[clipIndex] > 0) objectBox.min[clipAxis] = Math.max(objectBox.min[clipAxis], cut);
+          else objectBox.max[clipAxis] = Math.min(objectBox.max[clipAxis], cut);
+        }
+        // Clip each element first so a fully cut element cannot enlarge a union.
+        if (!objectBox.isEmpty()) box.union(objectBox);
+      }
     }
-    return { box, hasContent };
+    return { box, hasContent: !box.isEmpty() };
   }
 
   _autoFrameObliqueView(bounds = null) {
@@ -333,10 +419,7 @@ export class Viewer3D {
       this._setFallbackObliqueView();
       return;
     }
-    const center = box.getCenter(new THREE.Vector3());
-    const size = box.getSize(new THREE.Vector3());
-    const span = Math.max(size.x, size.y, size.z, 2);
-    this._setInitialObliqueViewToTarget(center, span);
+    this._fitContentBox(box, new THREE.Vector3(1, 0.8, 1));
   }
 
   _createOriginPlanAxes(length = 1.2) {
@@ -488,7 +571,7 @@ export class Viewer3D {
     this._positionOriginAxes(bounds);
 
     if (this._pendingInitialCamera) {
-      this._autoFrameObliqueView(bounds);
+      this._autoFrameObliqueView(this._computeContentBounds({ clipped: true }));
       this._pendingInitialCamera = false;
     }
   }
@@ -1136,6 +1219,7 @@ export class Viewer3D {
   }
 
   stopRendering() {
+    this._cancelPointerInteraction();
     this._frames.setActive(false);
   }
 
@@ -1167,7 +1251,7 @@ export class Viewer3D {
   getClippingRange(axis) {
     this.init();
     this._syncScene();
-    const { box, hasContent } = this._computeContentBounds();
+    const { box, hasContent } = this._computeContentBounds({ visibleOnly: false, includeNodes: true });
     if (!hasContent) return { min: 0, max: 1000 };
     const ranges = { X: [box.min.x, box.max.x], Y: [-box.max.z, -box.min.z], Z: [box.min.y, box.max.y] };
     const range = ranges[String(axis).toUpperCase()];
@@ -1216,39 +1300,54 @@ export class Viewer3D {
   focusElements(picks) {
     this.init();
     this._syncScene();
-    const box = new THREE.Box3();
-    for (const pick of picks) {
-      for (const object of this._visuals.get(`${pick.kind}:${pick.id}`) || []) {
-        if (object.visible) box.union(new THREE.Box3().setFromObject(object));
-      }
-    }
-    if (box.isEmpty()) return false;
-    // Bound the retained part of this axis-aligned half-space as well.
-    if (this.clipping) {
-      const { normal, constant } = clippingEquation(this.clipping.axis, this.clipping.positionMm, this.clipping.flipped);
-      const index = normal.findIndex(n => n !== 0);
-      const axis = ['x', 'y', 'z'][index];
-      const cut = -constant / normal[index];
-      if (normal[index] > 0) box.min[axis] = Math.max(box.min[axis], cut);
-      else box.max[axis] = Math.min(box.max[axis], cut);
-      if (box.isEmpty()) return false;
-    }
+    const { box, hasContent } = this._computeContentBounds({ picks, clipped: true });
+    return hasContent && this._fitContentBox(box);
+  }
+
+  focusAll() {
+    this.init();
+    this._syncScene();
+    const { box, hasContent } = this._computeContentBounds({ clipped: true });
+    return hasContent && this._fitContentBox(box);
+  }
+
+  setViewPreset(name) {
+    const directions = {
+      oblique: [1, 0.8, 1],
+      // Avoid the polar singularity while keeping CAD +Y at screen top.
+      top: [0, 1, 1e-6],
+      front: [0, 0, 1],
+      right: [1, 0, 0],
+    };
+    if (!Object.hasOwn(directions, name)) return false;
+    this.init();
+    this._syncScene();
+    const { box, hasContent } = this._computeContentBounds({ clipped: true });
+    return hasContent && this._fitContentBox(box, new THREE.Vector3(...directions[name]));
+  }
+
+  _fitContentBox(box, direction = null) {
     const center = box.getCenter(new THREE.Vector3());
     const radius = Math.max(box.getSize(new THREE.Vector3()).length() / 2, 0.25);
-    const halfFov = Math.min(THREE.MathUtils.degToRad(this.camera.fov / 2),
-      Math.atan(Math.tan(THREE.MathUtils.degToRad(this.camera.fov / 2)) * this.camera.aspect));
+    // Fit a bounding sphere inside both vertical and horizontal perspective
+    // fields, including narrow viewports and the current camera zoom.
+    const verticalFov = THREE.MathUtils.degToRad(this.camera.getEffectiveFOV() / 2);
+    const halfFov = Math.min(verticalFov, Math.atan(Math.tan(verticalFov) * this.camera.aspect));
     const distance = radius / Math.sin(halfFov) * 1.15;
-    const direction = this.camera.position.clone().sub(this.controls.target).normalize();
-    if (!direction.lengthSq()) direction.set(1, 0.8, 1).normalize();
+    const viewDirection = direction?.clone() || this.camera.position.clone().sub(this.controls.target);
+    if (!viewDirection.lengthSq()) viewDirection.set(1, 0.8, 1);
+    viewDirection.normalize();
+    if (![...center.toArray(), ...viewDirection.toArray(), distance].every(Number.isFinite)) return false;
     // Flush old damping deltas before setting a precise new target.
     const damping = this.controls.enableDamping;
     this.controls.enableDamping = false;
     this.controls.update();
-    this.camera.position.copy(center).addScaledVector(direction, distance);
+    this.camera.position.copy(center).addScaledVector(viewDirection, distance);
     this.controls.target.copy(center);
     this.camera.near = Math.max(0.001, distance / 10000);
     this.camera.far = Math.max(1000, distance + radius * 4);
     this.camera.updateProjectionMatrix();
+    this.camera.lookAt(center);
     this.controls.update();
     this.controls.enableDamping = damping;
     this.requestRender();
@@ -1273,8 +1372,12 @@ export class Viewer3D {
     this.controls?.dispose();
     const canvas = this.renderer?.domElement;
     canvas?.removeEventListener('pointerdown', this._onPointerDown);
+    canvas?.removeEventListener('pointermove', this._onPointerMove);
     canvas?.removeEventListener('pointerup', this._onPointerUp);
     canvas?.removeEventListener('pointercancel', this._onPointerCancel);
+    canvas?.removeEventListener('lostpointercapture', this._onLostPointerCapture);
+    this._eventWindow?.removeEventListener('blur', this._onWindowBlur);
+    this._eventDocument?.removeEventListener('visibilitychange', this._onVisibilityChange);
     disposeObjects(this._contentGroups(), { materials: false });
     disposeObjects([this.gridHelper, this.originAxes]);
     this._disposeMaterialCache();
@@ -1283,6 +1386,8 @@ export class Viewer3D {
     this._baseMaterials.clear();
     this._visuals.clear();
     this._selection.clear();
+    this._pickPointers.clear();
+    this._pickGesture = null;
     this._index = null;
     this._levelZMm = this._maxBeamHMByLevel = this._nodeLevelId = null;
     this.scene?.clear();

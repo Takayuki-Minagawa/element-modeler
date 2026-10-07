@@ -28,6 +28,7 @@ import { initLang, setLang, getLang, t } from './i18n.js';
 import { getHelpContent } from './help-content.js';
 import { invalidateCssVarCache } from './dom-utils.js';
 import { showNotice } from './notice.js';
+import { blocksCadShortcut } from './keyboard.js';
 import { initWorkspace } from './ui/workspace.js';
 import { fitVisiblePlan, initPlanNavigation } from './ui/plan-navigation.js';
 import { showInspector } from './ui/inspector.js';
@@ -405,8 +406,27 @@ tab3d.addEventListener('click', async () => {
   const v = await loadViewer3D();
   if (v && activeView === '3d') {
     v.startRendering();
+    v.renderer.domElement.tabIndex = 0;
+    v.renderer.domElement.setAttribute('aria-label', '3D');
     viewerTools?.refresh();
   }
+});
+
+// Keep view shortcuts on the 3D canvas, so typing in forms never moves it.
+// Consume these keys before the window's F shortcut can select the floor tool.
+viewerContainer.addEventListener('pointerdown', event => {
+  if (event.target === viewer3d?.renderer?.domElement) event.target.focus({ preventScroll: true });
+}, true);
+viewerContainer.addEventListener('keydown', event => {
+  if (activeView !== '3d' || event.target !== viewer3d?.renderer?.domElement ||
+      document.activeElement !== event.target) return;
+  const key = event.key.toLowerCase();
+  if (key !== 'home' && key !== 'f') return;
+  event.stopPropagation();
+  if (blocksCadShortcut(event) || event.ctrlKey || event.metaKey || event.altKey || event.shiftKey) return;
+  event.preventDefault();
+  const focused = key === 'home' ? viewer3d.focusAll() : viewer3d.focusSelection();
+  if (!focused) showNotice(getLang() === 'ja' ? '表示中の対象がありません' : 'No displayed target', 'warning');
 });
 
 // --- Export / Import ---

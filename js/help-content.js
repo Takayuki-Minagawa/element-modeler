@@ -6,6 +6,8 @@ export const helpContentJa = `
 <h3>診断から対象を確認</h3>
 <p>モデルチェックで重要度・対象種別を絞り込み、対象ボタンを押します。対象の階へ移動し、選択・カメラを合わせます。必要な表示フィルタが解除されます。属性を修正したら再診断してください。</p>
 <h3>3D切断・単独表示・GLB</h3>
+<p>左ドラッグで回転、右ドラッグ（またはShift/Ctrl/⌘＋左ドラッグ）で画面移動、ホイールでカーソル位置へズームします。「全体表示」で表示中のモデルを画面に収め、「斜め / 上 / 正面 / 右」で方向を切り替えます。透視投影のまま、切断・単独表示・表示フィルタは維持します。3D画面にフォーカスがあるときはHomeで全体表示、Fで選択へ移動できます。</p>
+<p>切断位置はmm単位で数値入力でき、Enterまたはフォーカス移動で確定します。スライダーとも連動し、空欄・範囲外の入力は直前の有効値へ戻ります。</p>
 <p>3Dタブの右サイドバーにある「3D表示・出力」で切断軸X/Y/Zを選び、位置スライダと反転で内部を確認します。軸を解除すると戻ります。「選択を単独表示」「単独表示を解除」「選択へ移動」で対象を確認できます。見出し右端の「− / +」で操作欄を折りたためます。表示操作でCADの幾何は変わりません。GLBは表示対象をm単位で保存し、切断面は開いたままです。</p>
 <p>3Dタブへ切り替えると右サイドバーが開きます。操作欄はモデルに重ならず、折りたたみ状態はブラウザに保存されます。サイドバー全体を閉じるには境界の矢印を押してください。</p>
 <h3>解析結果・荷重配分</h3>
@@ -167,6 +169,8 @@ export const helpContentEn = `
 <h3>Navigate from diagnostics</h3>
 <p>Filter Model Check by severity and element type, then select a target button. The app switches level, selects the target and frames it, clearing necessary display filters. Edit its properties and run the check again.</p>
 <h3>3D clipping, isolation and GLB</h3>
+<p>Left-drag to orbit, right-drag (or Shift/Ctrl/Command + left-drag) to pan, and use the wheel to zoom to the cursor. Fit all frames the displayed model; Oblique / Top / Front / Right changes the viewing direction. Perspective projection, clipping, isolation and display filters are preserved. With focus in the 3D canvas, Home fits all and F focuses the selection.</p>
+<p>Enter the clipping position in millimeters and press Enter or leave the field to apply it. The slider stays synchronized. Blank or out-of-range input restores the last valid value.</p>
 <p>On the 3D tab, choose X/Y/Z in 3D view and export in the right sidebar, then move or flip the cutting plane. Off restores the full view. Use Isolate selection, Clear isolation and Focus selection to inspect elements. These operations preserve CAD geometry. GLB exports the displayed model in meters with open cut faces.</p>
 <p>Switching to 3D opens the right sidebar. The controls stay beside the model. Use the − / + button to collapse and expand them; the browser remembers their collapsed state. Use the arrow on the sidebar boundary to hide the whole sidebar.</p>
 <h3>Results and load assignment</h3>

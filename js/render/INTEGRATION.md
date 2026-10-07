@@ -77,6 +77,12 @@ canvas2d and the lazily initialized viewer3d getter. `canvas2d.stats.frames` and
   retained portion, preserving camera direction; false if none can be framed.
   Hidden levels are not implicitly enabled. Diagnostics can use this API to
   focus referenced elements.
+- `focusAll()`: frame all displayed model elements with the current direction,
+  respecting clipping and isolation. Grid, axes and node markers do not expand
+  the bounds. Returns false without moving the camera if nothing is visible.
+- `setViewPreset('oblique' | 'top' | 'front' | 'right')`: frame displayed elements
+  from a standard CAD direction, preserving perspective projection and all
+  visibility settings. Top has plan X right / Y up; front has X right / Z up.
 - `exportGLB()`: Promise of an ArrayBuffer; binary GLB with display geometry,
   element ID/kind/type/level/section extras, and original colors. The temporary
   snapshot is independently owned and disposed on both success and failure.

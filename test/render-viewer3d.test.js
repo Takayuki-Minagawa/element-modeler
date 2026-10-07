@@ -5,13 +5,14 @@ import { AppState } from '../js/state.js';
 import { FrameScheduler } from '../js/render/frame-scheduler.js';
 
 register('./helpers/three-loader.mjs', import.meta.url);
-let THREE, Viewer3D, createExportScene, exportViewerGLB, GLTFLoader;
+let THREE, Viewer3D, createExportScene, exportViewerGLB, GLTFLoader, OrbitControls;
 let missing = false;
 try {
   THREE = await import('three');
   ({ Viewer3D } = await import('../js/viewer3d.js'));
   ({ createExportScene, exportViewerGLB } = await import('../js/render/glb-export.js'));
   ({ GLTFLoader } = await import('three/addons/loaders/GLTFLoader.js'));
+  ({ OrbitControls } = await import('three/addons/controls/OrbitControls.js'));
 } catch (error) {
   if (error.code !== 'ERR_MODULE_NOT_FOUND' || !error.message.includes("'three'")) throw error;
   missing = true;
@@ -34,11 +35,13 @@ function fixture() {
   viewer.scene = new THREE.Scene();
   viewer.camera = new THREE.PerspectiveCamera(50, 1, 0.1, 1000);
   viewer.camera.position.set(5, 4, 5);
-  viewer.controls = { target: new THREE.Vector3(), update() {}, dispose() {}, removeEventListener() {} };
   viewer.renderer = { clippingPlanes: [], render() {}, dispose() {}, domElement: {
     getBoundingClientRect: () => ({ left: 0, top: 0, width: 100, height: 100 }),
-    removeEventListener() {}, remove() {},
+    addEventListener() {}, removeEventListener() {}, remove() {}, getRootNode() { return this; },
+    setPointerCapture() {}, releasePointerCapture() {}, style: {}, clientWidth: 100, clientHeight: 100,
   } };
+  viewer.controls = new OrbitControls(viewer.camera, viewer.renderer.domElement);
+  viewer._onControlsChange = () => viewer.requestRender();
   for (const kind of ['member', 'surface', 'node', 'load', 'support']) {
     viewer[`${kind}Group`] = new THREE.Group(); viewer.scene.add(viewer[`${kind}Group`]);
   }
@@ -164,6 +167,187 @@ test('Three 0.170 renderer behavior and binary GLB round trip', { skip: missing 
     assert.ok(viewer.camera.position.distanceTo(viewer.controls.target) > 9);
     viewer.setClipping('X', -1000);
     assert.equal(viewer.focusSelection(), false);
+    viewer.dispose();
+  });
+
+  await t.test('initial and whole-model fit cover every corner in a narrow viewport and preserve direction', () => {
+    const { state, viewer } = fixture();
+    state.updateNode(state.nodes[1].id, { x: 300000, y: 0 });
+    viewer.camera.aspect = 0.18;
+    viewer.resetModelView(); viewer._syncScene();
+    const assertFramed = () => {
+      const { box } = viewer._computeContentBounds({ clipped: true });
+      viewer.camera.updateMatrixWorld(true);
+      for (const x of [box.min.x, box.max.x]) for (const y of [box.min.y, box.max.y]) {
+        for (const z of [box.min.z, box.max.z]) {
+          const point = new THREE.Vector3(x, y, z).project(viewer.camera);
+          assert.ok(Math.abs(point.x) < 1 && Math.abs(point.y) < 1 && Math.abs(point.z) < 1,
+            `model corner outside camera: ${point.toArray()}`);
+        }
+      }
+    };
+    assertFramed();
+    viewer.camera.position.copy(viewer.controls.target).add(new THREE.Vector3(-3, 1, -4));
+    const direction = viewer.camera.position.clone().sub(viewer.controls.target).normalize();
+    assert.equal(viewer.focusAll(), true);
+    assert.ok(direction.distanceTo(viewer.camera.position.clone().sub(viewer.controls.target).normalize()) < 1e-12);
+    assertFramed();
+    viewer.dispose();
+  });
+
+  await t.test('view presets use CAD axes with a stable orbit up direction', () => {
+    const { viewer } = fixture();
+    viewer.camera.aspect = 0.3;
+    for (const [name, expected, right, up] of [
+      ['oblique', [1, 0.8, 1], null, null],
+      ['top', [0, 1, 0], [1, 0, 0], [0, 0, -1]],
+      ['front', [0, 0, 1], [1, 0, 0], [0, 1, 0]],
+      ['right', [1, 0, 0], [0, 0, -1], [0, 1, 0]],
+    ]) {
+      assert.equal(viewer.setViewPreset(name), true);
+      const direction = viewer.camera.position.clone().sub(viewer.controls.target).normalize();
+      assert.ok(direction.distanceTo(new THREE.Vector3(...expected).normalize()) < 2e-6, name);
+      assert.deepEqual(viewer.camera.up.toArray(), [0, 1, 0]);
+      viewer.camera.updateMatrixWorld(true);
+      if (right) {
+        const center = viewer.controls.target.clone().project(viewer.camera);
+        const rightPoint = viewer.controls.target.clone().add(new THREE.Vector3(...right)).project(viewer.camera);
+        const upPoint = viewer.controls.target.clone().add(new THREE.Vector3(...up)).project(viewer.camera);
+        assert.ok(rightPoint.x > center.x, `${name} right direction`);
+        assert.ok(upPoint.y > center.y, `${name} up direction`);
+      }
+      const position = viewer.camera.position.clone();
+      viewer.controls.update();
+      assert.ok(position.distanceTo(viewer.camera.position) < 1e-8, `${name} settled camera`);
+    }
+    assert.equal(viewer.setViewPreset('unknown'), false);
+    viewer.dispose();
+  });
+
+  await t.test('whole-model fit respects clipping, isolation and filters without changing the model', () => {
+    const { state, viewer, m2 } = fixture();
+    const farA = state.addNode(5000, 1000000), farB = state.addNode(6000, 1000000);
+    state.addMember(farA.id, farB.id);
+    viewer.requestRebuild(); viewer._syncScene();
+    const range = viewer.getClippingRange('Y');
+    viewer.setClipping('X', 2000);
+    assert.equal(viewer.focusAll(), true);
+    assert.ok(Math.abs(viewer.controls.target.x - 1) < 1e-6);
+    assert.equal(viewer.controls.target.z, -1); // fully clipped far member is excluded
+    state.select('member', m2.id); viewer.isolateSelection();
+    const model = state.toJSON();
+    assert.equal(viewer.focusAll(), true);
+    assert.equal(viewer.controls.target.z, -2);
+    assert.deepEqual(viewer.getClippingRange('Y'), range); // slider remains independent of isolation
+    assert.deepEqual(state.toJSON(), model);
+    assert.deepEqual([...viewer._isolation], [`member:${m2.id}`]);
+    assert.deepEqual(viewer.clipping, { axis: 'X', positionMm: 2000, flipped: false });
+    const position = viewer.camera.position.clone(), target = viewer.controls.target.clone();
+    viewer.setClipping('X', -1000);
+    assert.equal(viewer.focusAll(), false);
+    assert.equal(viewer.setViewPreset('top'), false);
+    assert.deepEqual(viewer.camera.position, position);
+    assert.deepEqual(viewer.controls.target, target);
+    viewer.clearClipping(); viewer.clearIsolation();
+    state.settings.showMembers = false;
+    viewer.requestRebuild(); viewer._syncScene();
+    assert.equal(viewer.focusAll(), false);
+    assert.deepEqual(viewer.camera.position, position);
+    viewer.dispose();
+  });
+
+  await t.test('whole-model fit excludes helpers and standalone node visuals', () => {
+    const { viewer } = fixture();
+    assert.equal(viewer.focusAll(), true);
+    const position = viewer.camera.position.clone(), target = viewer.controls.target.clone();
+    const node = new THREE.Mesh(new THREE.SphereGeometry(), new THREE.MeshBasicMaterial());
+    node.position.set(100000, 100000, 100000);
+    viewer.nodeGroup.add(node); viewer._visuals.set('node:orphan', [node]);
+    viewer.gridHelper = new THREE.GridHelper(1000000, 2); viewer.scene.add(viewer.gridHelper);
+    assert.equal(viewer.focusAll(), true);
+    assert.ok(viewer.camera.position.distanceTo(position) < 1e-10);
+    assert.deepEqual(viewer.controls.target, target);
+    viewer._isolation = new Set(['node:orphan']); viewer._applyIsolation();
+    assert.equal(viewer.focusAll(), false);
+    viewer.dispose();
+    node.material.dispose();
+  });
+
+  await t.test('picking accepts single clicks and taps but excludes navigation and interrupted gestures', () => {
+    const { viewer } = fixture();
+    const picks = [];
+    viewer._pickAt = (x, y) => picks.push([x, y]);
+    const pointer = (patch = {}) => ({ pointerId: 1, pointerType: 'mouse', button: 0, buttons: 1,
+      isPrimary: true, clientX: 50, clientY: 50, ...patch });
+    const start = patch => viewer._beginPickGesture(pointer(patch));
+    const move = patch => viewer._movePickGesture(pointer(patch));
+    const end = patch => viewer._endPickGesture(pointer({ buttons: 0, ...patch }));
+    start(); end();
+    start({ pointerType: 'touch' }); end({ pointerType: 'touch', clientX: 52 });
+    assert.deepEqual(picks, [[50, 50], [52, 50]]);
+    for (const modifier of ['ctrlKey', 'shiftKey', 'metaKey', 'altKey']) {
+      start({ [modifier]: true }); end();
+      start(); end({ [modifier]: true });
+    }
+    start({ button: 2, buttons: 2 }); end({ button: 2 });
+    start(); move({ clientX: 54 }); move({ clientX: 50 }); end(); // round trip exceeds total travel
+    start(); move({ buttons: 3 }); end();
+    start(); start({ pointerId: 2, pointerType: 'touch', isPrimary: false });
+    end({ pointerId: 2 }); end();
+    start(); viewer._cancelPickGesture(pointer()); end();
+    start(); end({ pointerId: 99 }); move({ clientX: 60 }); end();
+    assert.equal(picks.length, 2);
+    assert.equal(viewer._pickPointers.size, 0);
+    start({ pointerType: 'touch' }); end({ pointerType: 'touch' });
+    assert.equal(picks.length, 3); // a new gesture after multitouch/cancel still works
+    viewer.dispose();
+  });
+
+  await t.test('interrupted pointer capture resets orbit tracking and allows the next click and pan', async () => {
+    const { viewer } = fixture();
+    const event = { pointerId: 1, pointerType: 'mouse', button: 0, buttons: 1,
+      isPrimary: true, clientX: 50, clientY: 50 };
+    viewer.controls.target.set(200, 300, 400);
+    viewer.camera.position.copy(viewer.controls.target).add(new THREE.Vector3(5, 4, 5));
+    viewer.controls.update();
+    const target = viewer.controls.target.clone(), position = viewer.camera.position.clone();
+    const oldControls = viewer.controls;
+    viewer._beginPickGesture(event); oldControls._onPointerDown(event);
+    assert.deepEqual(oldControls._pointers, [1]);
+    viewer._cancelPointerInteraction(); // blur, hidden document or hidden viewer
+    assert.notEqual(viewer.controls, oldControls);
+    assert.deepEqual(viewer.controls._pointers, []);
+    assert.deepEqual(viewer.controls.target, target);
+    assert.ok(viewer.camera.position.distanceTo(position) < 1e-10);
+    assert.deepEqual(viewer.camera.up.toArray(), [0, 1, 0]);
+    assert.equal(viewer.controls.enablePan, true);
+    assert.equal(viewer.controls.zoomToCursor, true);
+    assert.equal(viewer.controls.enableDamping, true);
+    assert.ok(viewer.controls.hasEventListener('change', viewer._onControlsChange));
+    let picks = 0; viewer._pickAt = () => picks++;
+    viewer._beginPickGesture(event); viewer.controls._onPointerDown(event);
+    const restoredControls = viewer.controls;
+    viewer._lostPickPointerCapture(event); // even a release before our up listener is harmless
+    viewer._endPickGesture({ ...event, buttons: 0 }); viewer.controls._onPointerUp(event);
+    await Promise.resolve();
+    assert.equal(picks, 1);
+    assert.equal(viewer.controls, restoredControls);
+    const pan = { ...event, button: 2, buttons: 2 };
+    viewer._beginPickGesture(pan); viewer.controls._onPointerDown(pan);
+    viewer.controls._onPointerMove({ ...pan, clientX: 60 });
+    assert.ok(viewer.controls.target.distanceTo(target) > 0);
+    assert.ok(viewer.controls.target.distanceTo(target) < 2);
+    viewer._endPickGesture({ ...pan, clientX: 60, buttons: 0 }); viewer.controls._onPointerUp(pan);
+    assert.equal(picks, 1);
+    viewer._beginPickGesture(event); viewer.controls._onPointerDown(event);
+    viewer._lostPickPointerCapture(event);
+    await Promise.resolve();
+    assert.equal(viewer._pickPointers.size, 0);
+    assert.deepEqual(viewer.controls._pointers, []);
+    viewer._beginPickGesture(event); viewer.controls._onPointerDown(event);
+    viewer.stopRendering();
+    assert.equal(viewer._pickPointers.size, 0);
+    assert.deepEqual(viewer.controls._pointers, []);
     viewer.dispose();
   });
 
