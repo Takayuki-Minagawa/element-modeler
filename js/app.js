@@ -323,7 +323,11 @@ const ui = new UI(state, {
 
 // Whole-model history restores can change levels and display settings. Keep
 // their controls synchronized before ToolManager requests the next render.
-history.setOnRestore(() => {
+history.setOnRestore(context => {
+  if (context === 'model-replacement') {
+    completeModelLoad();
+    return;
+  }
   syncSettingsControls();
   ui.refreshLevelSelectors();
   ui.refreshToolState();

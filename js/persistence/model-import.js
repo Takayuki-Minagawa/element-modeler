@@ -137,7 +137,7 @@ export function applyModelImport(data, state, history, options) {
     restoreSnapshot(state, prepared);
     return true;
   };
-  if (history) history.transact(apply);
+  if (history) history.transact(apply, 'model-replacement');
   else apply();
   return data;
 }

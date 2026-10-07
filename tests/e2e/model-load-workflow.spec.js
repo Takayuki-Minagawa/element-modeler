@@ -150,3 +150,43 @@ test('DXF load and clear are reversible through the visible Undo and Redo button
   await page.getByRole('button', { name: '元に戻す', exact: true }).click();
   await expect.poll(() => page.evaluate(() => window._app.state.underlay?.name)).toBe('reference.dxf');
 });
+
+for (const view of ['2d', '3d']) {
+  test(`undo and redo of a distant model replacement keep the restored model visible in ${view}`, async ({ page }) => {
+    await upload(page, fixture());
+    if (view === '3d') {
+      await page.locator('#tab-3d').click();
+      await expect(page.locator('#viewer-3d canvas')).toBeVisible();
+    }
+    await upload(page, fixture(900000));
+    for (const [button, offset] of [['元に戻す', 0], ['やり直す', 900000], ['元に戻す', 0]]) {
+      await page.getByRole('button', { name: button, exact: true }).click();
+      await expect.poll(() => page.evaluate(() => window._app.state.nodes[0].x)).toBe(offset);
+      if (view === '3d') {
+        await expect.poll(() => page.evaluate(() => window._app.viewer3d.controls.target.x)).toBe(offset / 1000 + 1.5);
+      } else {
+        const positions = await page.evaluate(() => {
+          const { state, canvas2d: c } = window._app;
+          return { points: state.nodes.map(n => c.worldToScreen(n.x, n.y)), width: c.logicalWidth, height: c.logicalHeight };
+        });
+        for (const point of positions.points) {
+          expect(point.x).toBeGreaterThan(0); expect(point.x).toBeLessThan(positions.width);
+          expect(point.y).toBeGreaterThan(0); expect(point.y).toBeLessThan(positions.height);
+        }
+      }
+    }
+  });
+}
+
+test('ordinary edit undo preserves the camera instead of fitting the model', async ({ page }) => {
+  await upload(page, fixture());
+  await startPlacement(page);
+  await page.locator('#coordinate-x').fill('2000');
+  await page.locator('#coordinate-form button[type="submit"]').click();
+  await expect(page.locator('#model-summary')).toContainText('線材 2');
+  await page.evaluate(() => { window._app.canvas2d.pan(120, -80); window._app.update(); });
+  const camera = await page.evaluate(() => window._app.canvas2d.camera);
+  await page.getByRole('button', { name: '元に戻す', exact: true }).click();
+  await expect(page.locator('#model-summary')).toContainText('線材 1');
+  expect(await page.evaluate(() => window._app.canvas2d.camera)).toEqual(camera);
+});

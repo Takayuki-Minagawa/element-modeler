@@ -395,6 +395,20 @@ test('grid generation cannot replace a model during a provisional drag', () =>
   })
 );
 
+test('opening the generator focuses immediately and never steals subsequent input focus', () =>
+  withFakeBrowser(root => {
+    const frames = [];
+    globalThis.requestAnimationFrame = callback => frames.push(callback);
+    const controller = initModal(root);
+    controller.show();
+    assert.equal(root.activeElement, root.getElementById('grid-frame-story-count'));
+    const span = root.getElementById('grid-frame-spans-x');
+    span.focus();
+    for (const callback of frames) callback();
+    assert.equal(root.activeElement, span);
+  })
+);
+
 test('initial grid frame modal exposes all inputs and actions', async () => {
   const html = await readFile(new URL('../index.html', import.meta.url), 'utf8');
 

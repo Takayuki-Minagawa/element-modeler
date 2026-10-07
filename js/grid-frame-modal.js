@@ -559,7 +559,9 @@ export function initGridFrameModal({
     settingsModal?.setAttribute('inert', '');
     modal.classList.add('visible');
     modal.setAttribute('aria-hidden', 'false');
-    requestAnimationFrame(() => storyCountInput.focus());
+    // The modal is visible now. A deferred focus can steal the next keystroke
+    // after the user has already moved to a span or section input.
+    storyCountInput.focus();
   }
 
   function hide({ restoreFocus = true } = {}) {
@@ -569,7 +571,7 @@ export function initGridFrameModal({
     modal.setAttribute('aria-hidden', 'true');
     settingsModal?.removeAttribute('inert');
     if (restoreFocus && returnFocusElement?.isConnected) {
-      requestAnimationFrame(() => returnFocusElement.focus());
+      returnFocusElement.focus();
     }
   }
 
@@ -686,14 +688,14 @@ export function initGridFrameModal({
       if (hasProvisionalEdit(state)) {
         throw new Error('Finish or cancel the current edit before generating a new model');
       }
-      history.save();
+      history.save('model-replacement');
       snapshotSaved = true;
       state.loadJSON(generatedModel);
       hide({ restoreFocus: false });
       hideSettingsModal();
       onModelLoaded();
       writeStorage(GRID_FRAME_INPUT_STORAGE_KEY, inputValues);
-      requestAnimationFrame(() => document.getElementById('btn-settings')?.focus());
+      document.getElementById('btn-settings')?.focus();
 
       // The foundation is the only level below GL, so it is always the lowest
       // one; its members are reported separately from the frame above.

@@ -5,6 +5,7 @@ import { Canvas2D } from '../js/canvas2d.js';
 import { fitVisiblePlan } from '../js/ui/plan-navigation.js';
 import { fitPlanToPoints, MIN_PLAN_SCALE, MAX_PLAN_SCALE } from '../js/plan-camera.js';
 import { drawGrid, snapToGrid } from '../js/grid.js';
+import { applyModelImport } from '../js/persistence/model-import.js';
 
 function canvas() {
   return { logicalWidth: 800, logicalHeight: 500, camera: {}, requestDraw() {},
@@ -80,6 +81,26 @@ test('fitting large polylines avoids argument-spread limits', () => {
   assertInside(view, 149999, 149999);
 });
 
+test('fit skips incomplete CAD underlay polylines just as the renderer does', () => {
+  const state = new AppState();
+  const a = state.addNode(100000, 200000), b = state.addNode(103000, 200000);
+  state.addMember(a.id, b.id, { levelId: 'L0' });
+  const view = canvas();
+  fitVisiblePlan(state, view);
+  const expectedCamera = { ...view.camera };
+  const data = state.toJSON();
+  for (const points of [undefined, null, {}, [], [{ x: -1e9, y: -1e9 }]]) {
+    data.underlay = { name: 'incomplete-polyline.dxf', entities: [{ type: 'polyline', points }] };
+    applyModelImport(data, state, null, { preserveCatalogs: false });
+    const before = state.snapshot();
+    fitVisiblePlan(state, view);
+    assert.deepEqual(view.camera, expectedCamera);
+    assertInside(view, a.x, a.y);
+    assertInside(view, b.x, b.y);
+    assert.deepEqual(state.snapshot(), before);
+  }
+});
+
 test('grid drawing remains bounded at low zoom while configured snapping stays unchanged', t => {
   const previous = { document: globalThis.document, getComputedStyle: globalThis.getComputedStyle };
   globalThis.document = { documentElement: {} };
@@ -99,4 +120,38 @@ test('grid drawing remains bounded at low zoom while configured snapping stays u
   assert.ok(vertical.length > 10);
   assert.ok(vertical[1][0] - vertical[0][0] >= 12 - 1e-8);
   assert.deepEqual(snapToGrid(12.4, -8.6, gridSize), { x: 12, y: -9 });
+  lines.length = 0;
+  drawGrid(ctx, { offsetX: 80, offsetY: 420, scale: 0.05 }, 500, 800, 500);
+  const xLines = [...new Set(lines.filter(([x1, y1, x2, y2]) =>
+    x1 === x2 && y1 === 0 && y2 === 500 && x1 >= 0 && x1 <= 800).map(line => line[0]))].sort((a, b) => a - b);
+  const yLines = [...new Set(lines.filter(([x1, y1, x2, y2]) =>
+    y1 === y2 && x1 === 0 && x2 === 800 && y1 >= 0 && y1 <= 500).map(line => line[1]))].sort((a, b) => a - b);
+  assert.deepEqual(xLines, Array.from({ length: 32 }, (_, index) => 5 + index * 25));
+  assert.deepEqual(yLines, Array.from({ length: 20 }, (_, index) => 20 + index * 25));
+});
+
+test('fitting extreme finite CAD coordinates cannot trap grid drawing in an imprecise index loop', t => {
+  const previous = { document: globalThis.document, getComputedStyle: globalThis.getComputedStyle };
+  globalThis.document = { documentElement: {} };
+  globalThis.getComputedStyle = () => ({ getPropertyValue: () => '#123456' });
+  t.after(() => Object.assign(globalThis, previous));
+  const state = new AppState();
+  const data = state.toJSON();
+  data.nodes = [{ id: 1, x: 1e20, y: -1e20, z: 0 }];
+  applyModelImport(data, state, null, { preserveCatalogs: false });
+  const view = canvas();
+  fitVisiblePlan(state, view);
+  let strokes = 0;
+  const ctx = new Proxy({ stroke() {
+    // Fail quickly if a future regression stops the grid loop from advancing.
+    assert.ok(++strokes < 150, 'grid drawing must have a bounded number of strokes');
+  } }, { get: (object, key) => key in object ? object[key] : () => {} });
+  drawGrid(ctx, view.camera, 500, view.logicalWidth, view.logicalHeight);
+  assert.ok(strokes > 10);
+  for (const offset of [Infinity, -Infinity, NaN]) {
+    strokes = 0;
+    drawGrid(ctx, { ...view.camera, offsetX: offset }, 500, 800, 500);
+    drawGrid(ctx, { ...view.camera, offsetY: offset }, 500, 800, 500);
+    assert.equal(strokes, 0);
+  }
 });

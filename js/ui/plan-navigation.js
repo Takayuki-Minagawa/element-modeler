@@ -30,7 +30,7 @@ function* visiblePlanPoints(state) {
     if (entity.type === 'line') {
       yield { x: entity.x1, y: entity.y1 };
       yield { x: entity.x2, y: entity.y2 };
-    } else if (entity.type === 'polyline') {
+    } else if (entity.type === 'polyline' && Array.isArray(entity.points) && entity.points.length >= 2) {
       yield* entity.points;
     } else if (entity.type === 'circle' || entity.type === 'arc') {
       // As in the DXF reader, the full circle conservatively bounds an arc.

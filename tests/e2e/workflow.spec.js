@@ -405,6 +405,14 @@ async function dragEndpoint(page, targetX) {
 
 test('physical drag previews never enter recovery; Escape retains unsaved committed edits and mouseup commits', async ({ page }) => {
   await importModel(page, buildBenchmarkState(AppState, 1).toJSON());
+  // Loading now frames the existing 5 m beam. Leave room for the planned
+  // 7 m extension so every native drag stays inside the canvas input area.
+  await page.evaluate(async () => {
+    const { fitPlanToPoints } = await import('/js/plan-camera.js');
+    const { canvas2d, update } = window._app;
+    fitPlanToPoints(canvas2d, [{ x: 0, y: 0 }, { x: 8000, y: 0 }]);
+    update();
+  });
   await page.evaluate(() => window._app.autosave.ready);
   await selectMember(page);
   expect(await page.evaluate(() => window._app.autosave.listGenerations())).toEqual([]);

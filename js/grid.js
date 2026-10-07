@@ -19,6 +19,8 @@ const ORIGIN_VISIBLE_MARGIN = 20;
 const MIN_GRID_SPACING_PX = 12;
 
 export function drawGrid(ctx, camera, gridSize, canvasW, canvasH) {
+  if (![camera.offsetX, camera.offsetY, camera.scale, canvasW, canvasH].every(Number.isFinite) ||
+      camera.scale <= 0 || canvasW <= 0 || canvasH <= 0) return;
   ctx.save();
   drawGridLines(ctx, camera, gridSize, canvasW, canvasH);
   drawAxes(ctx, camera, canvasW, canvasH);
@@ -32,25 +34,26 @@ function drawGridLines(ctx, camera, gridSize, canvasW, canvasH) {
   // Draw an integer multiple of the configured grid at low zoom. Snapping
   // still uses the original gridSize, while rendering stays bounded by pixels.
   const spacing = gridSize * Math.max(1, Math.ceil(MIN_GRID_SPACING_PX / (gridSize * scale)));
-
-  // Calculate visible world bounds
-  const worldLeft = -offsetX / scale;
-  const worldRight = (canvasW - offsetX) / scale;
-  const worldMinY = (offsetY - canvasH) / scale;
-  const worldMaxY = offsetY / scale;
-
-  // Grid line range
-  const startX = Math.floor(worldLeft / spacing);
-  const endX = Math.ceil(worldRight / spacing);
-  const startY = Math.floor(worldMinY / spacing);
-  const endY = Math.ceil(worldMaxY / spacing);
+  const pixelSpacing = spacing * scale;
+  if (!Number.isFinite(pixelSpacing) || pixelSpacing <= 0) return;
+  // Reduce offsets to one screen interval before looping. At distant CAD
+  // coordinates a world-grid index can exceed the integer precision of Number,
+  // so incrementing that index would never advance and would freeze rendering.
+  const firstLine = offset => {
+    const remainder = offset % pixelSpacing;
+    return remainder > 0 ? remainder - pixelSpacing : remainder;
+  };
+  const startX = firstLine(offsetX);
+  const startY = firstLine(offsetY);
+  const columns = Math.ceil((canvasW - startX) / pixelSpacing);
+  const rows = Math.ceil((canvasH - startY) / pixelSpacing);
 
   ctx.strokeStyle = cssVar('--grid-line');
   ctx.lineWidth = 1;
 
   // Vertical lines
-  for (let index = startX; index <= endX; index++) {
-    const sx = index * spacing * scale + offsetX;
+  for (let index = 0; index <= columns; index++) {
+    const sx = startX + index * pixelSpacing;
     ctx.beginPath();
     ctx.moveTo(sx, 0);
     ctx.lineTo(sx, canvasH);
@@ -58,8 +61,8 @@ function drawGridLines(ctx, camera, gridSize, canvasW, canvasH) {
   }
 
   // Horizontal lines
-  for (let index = startY; index <= endY; index++) {
-    const sy = offsetY - index * spacing * scale;
+  for (let index = 0; index <= rows; index++) {
+    const sy = startY + index * pixelSpacing;
     ctx.beginPath();
     ctx.moveTo(0, sy);
     ctx.lineTo(canvasW, sy);

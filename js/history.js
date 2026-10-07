@@ -9,14 +9,18 @@ export class History {
     this.undoStack = [];
     this.redoStack = [];
     this.onRestore = null;
+    // Operation context belongs to the undo entry, never to saved model data.
+    this._contexts = new WeakMap();
   }
 
   setOnRestore(callback) {
     this.onRestore = typeof callback === 'function' ? callback : null;
   }
 
-  save() {
-    this.undoStack.push(captureSnapshot(this.state));
+  save(context = null) {
+    const snapshot = captureSnapshot(this.state);
+    this._contexts.set(snapshot, context);
+    this.undoStack.push(snapshot);
     if (this.undoStack.length > MAX_HISTORY) {
       this.undoStack.shift();
     }
@@ -26,7 +30,7 @@ export class History {
   // Runs fn and records an undo entry only when fn returns truthy (= the
   // model actually changed). A no-op leaves undo AND redo untouched, unlike
   // save() + undo(), which would reset selection/tool state and clear redo.
-  transact(fn) {
+  transact(fn, context = null) {
     if (fn.constructor?.name === 'AsyncFunction') {
       throw new Error('History.transact requires a synchronous callback');
     }
@@ -42,6 +46,7 @@ export class History {
       throw error;
     }
     if (changed) {
+      this._contexts.set(snap, context);
       this.undoStack.push(snap);
       if (this.undoStack.length > MAX_HISTORY) {
         this.undoStack.shift();
@@ -54,20 +59,26 @@ export class History {
   undo() {
     if (this.undoStack.length === 0) return false;
     const current = captureSnapshot(this.state);
-    restoreSnapshot(this.state, this.undoStack.at(-1));
+    const target = this.undoStack.at(-1);
+    const context = this._contexts.get(target) ?? null;
+    restoreSnapshot(this.state, target);
     this.undoStack.pop();
+    this._contexts.set(current, context);
     this.redoStack.push(current);
-    this.onRestore?.();
+    this.onRestore?.(context);
     return true;
   }
 
   redo() {
     if (this.redoStack.length === 0) return false;
     const current = captureSnapshot(this.state);
-    restoreSnapshot(this.state, this.redoStack.at(-1));
+    const target = this.redoStack.at(-1);
+    const context = this._contexts.get(target) ?? null;
+    restoreSnapshot(this.state, target);
     this.redoStack.pop();
+    this._contexts.set(current, context);
     this.undoStack.push(current);
-    this.onRestore?.();
+    this.onRestore?.(context);
     return true;
   }
 
