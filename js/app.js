@@ -398,6 +398,10 @@ tab3d.addEventListener('click', async () => {
   canvas2d.setActive(false);
   viewerContainer.hidden = false;
   document.getElementById('viewer-tools').hidden = false;
+  if (document.body.classList.contains('property-collapsed')) {
+    document.getElementById('btn-toggle-property').click();
+  }
+  document.getElementById('property-panel').scrollTop = 0;
   const v = await loadViewer3D();
   if (v && activeView === '3d') {
     v.startRendering();

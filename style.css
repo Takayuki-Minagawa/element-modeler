@@ -1189,30 +1189,24 @@ button:focus-visible, select:focus-visible, input:focus-visible, summary:focus-v
 .inspector-actions { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 12px; }
 .inspector-primary { width: 100%; margin-bottom: 12px; }
 .empty-selection-guide { color: var(--text-dim); line-height: 1.9; font-size: 12px; padding-top: 12px; }
-.viewer-overlay {
-  position: absolute;
-  top: 12px;
-  right: 12px;
-  display: flex;
-  width: 260px;
-  max-width: calc(100% - 24px);
-  max-height: calc(100% - 24px);
-  overflow: hidden;
+.viewer-sidebar {
+  margin: 12px 0 14px;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 6px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }
 .viewer-tools-panel { display: flex; flex-direction: column; min-width: 0; width: 100%; }
-.viewer-tools-header { display: flex; flex-shrink: 0; align-items: center; gap: 4px; padding: 4px; }
+.viewer-tools-header { display: flex; align-items: center; gap: 4px; padding: 4px 8px; }
 .viewer-tools-header button { margin: 0; min-height: 30px; border-color: transparent; }
 .viewer-tools-header button:hover { background: var(--hover-bg); }
 .viewer-tools-header button:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
-.viewer-tools-drag { display: flex; align-items: center; gap: 6px; flex: 1; min-width: 0; text-align: left; cursor: grab; touch-action: none; user-select: none; }
-.viewer-tools-drag.is-dragging { cursor: grabbing; }
-.viewer-tools-grip { color: var(--text-dim); }
+#viewer-tools .viewer-tools-title { flex: 1; min-width: 0; margin: 0; color: var(--text); font-size: 13px; text-transform: none; overflow-wrap: anywhere; }
 .viewer-tools-toggle { flex: 0 0 30px; cursor: pointer; }
-.viewer-overlay .viewer-tools-content { min-height: 0; overflow: auto; overscroll-behavior: contain; margin: 0; padding: 4px 10px 8px; border: 0; border-top: 1px solid var(--border); border-radius: 0; }
+.viewer-sidebar .viewer-tools-content { margin: 0; padding: 4px 10px 8px; border: 0; border-top: 1px solid var(--border); border-radius: 0; }
+.viewer-tools-content label { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
+.viewer-tools-content input[type="range"] { flex: 1; min-width: 60px; width: 100px; }
+.viewer-tools-content button { display: block; width: 100%; cursor: pointer; }
+.viewer-tools-content small { color: var(--text-dim); line-height: 1.5; }
 .workspace-dialog { width: min(420px, 92vw); padding: 0; }
 .workspace-dialog .grid-label { flex-direction: column; align-items: stretch; gap: 6px; padding: 8px 0; }
 .workspace-dialog .tool-filter-group { border: 0; }

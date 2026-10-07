@@ -6,8 +6,8 @@ export const helpContentJa = `
 <h3>診断から対象を確認</h3>
 <p>モデルチェックで重要度・対象種別を絞り込み、対象ボタンを押します。対象の階へ移動し、選択・カメラを合わせます。必要な表示フィルタが解除されます。属性を修正したら再診断してください。</p>
 <h3>3D切断・単独表示・GLB</h3>
-<p>3Dタブの「3D表示・出力」で切断軸X/Y/Zを選び、位置スライダと反転で内部を確認します。軸を解除すると戻ります。「選択を単独表示」「単独表示を解除」「選択へ移動」で対象を確認できます。表示操作でCADの幾何は変わりません。GLBは表示対象をm単位で保存し、切断面は開いたままです。</p>
-<p>パネルは見出しをドラッグして移動し、右端の「− / +」で折りたたみ・展開できます。位置と折りたたみ状態はブラウザに保存されます。見出しにフォーカスして矢印キーで移動（Shiftで大きく移動）、Homeキーで右上に戻せます。</p>
+<p>3Dタブの右サイドバーにある「3D表示・出力」で切断軸X/Y/Zを選び、位置スライダと反転で内部を確認します。軸を解除すると戻ります。「選択を単独表示」「単独表示を解除」「選択へ移動」で対象を確認できます。見出し右端の「− / +」で操作欄を折りたためます。表示操作でCADの幾何は変わりません。GLBは表示対象をm単位で保存し、切断面は開いたままです。</p>
+<p>3Dタブへ切り替えると右サイドバーが開きます。操作欄はモデルに重ならず、折りたたみ状態はブラウザに保存されます。サイドバー全体を閉じるには境界の矢印を押してください。</p>
 <h3>解析結果・荷重配分</h3>
 <p>「解析結果・荷重配分」から、同じCADモデルを外部OpenSeesPyで解析した結果JSONを読み込みます。表示面と変形倍率を指定し、変位・反力を確認できます。モデルが変わった結果は再読込・再解析が必要です。</p>
 <p>「応力図」で N / Qy / Qz / T / My / Mz を選ぶと、変形図と同じ投影で部材ごとの断面力を塗り図形として重ね、要素ごとの I端・J端の断面力表を表示します。引張正、モーメントは局所軸まわりの右手則で、正値は局所 +y（Qy）、−y（Mz）、+z（N, Qz, T, My）側に描くため、My・Mz は引張側に表示されます。数値誤差程度の成分は図を省略します。「材端力CSVを出力」で荷重ケース・要素・両端の断面力を CSV に保存できます。</p>
@@ -167,8 +167,8 @@ export const helpContentEn = `
 <h3>Navigate from diagnostics</h3>
 <p>Filter Model Check by severity and element type, then select a target button. The app switches level, selects the target and frames it, clearing necessary display filters. Edit its properties and run the check again.</p>
 <h3>3D clipping, isolation and GLB</h3>
-<p>On the 3D tab, choose X/Y/Z in 3D view and export, then move or flip the cutting plane. Off restores the full view. Use Isolate selection, Clear isolation and Focus selection to inspect elements. These operations preserve CAD geometry. GLB exports the displayed model in meters with open cut faces.</p>
-<p>Drag the panel heading to move it, or use the − / + button to collapse and expand it. The browser remembers its position and collapsed state. Focus the heading to move with arrow keys (Shift for larger steps), or press Home to return it to the top right.</p>
+<p>On the 3D tab, choose X/Y/Z in 3D view and export in the right sidebar, then move or flip the cutting plane. Off restores the full view. Use Isolate selection, Clear isolation and Focus selection to inspect elements. These operations preserve CAD geometry. GLB exports the displayed model in meters with open cut faces.</p>
+<p>Switching to 3D opens the right sidebar. The controls stay beside the model. Use the − / + button to collapse and expand them; the browser remembers their collapsed state. Use the arrow on the sidebar boundary to hide the whole sidebar.</p>
 <h3>Results and load assignment</h3>
 <p>Open Results / load assignment and load the result JSON produced by the external OpenSeesPy CLI from the same CAD model. Choose projection and deformation scale to inspect displacements and reactions. Changed models require new analysis and result import.</p>
 <p>Choose N / Qy / Qz / T / My / Mz under "Force diagram" to overlay each member's section forces on the same projection as the deformed shape, together with a table of I-end and J-end section forces per element. Tension is positive and moments follow the right-hand rule about the local axis; positive ordinates are drawn toward local +y (Qy), -y (Mz) or +z (N, Qz, T, My), so My and Mz appear on the tension side. Components at numerical-noise level are not drawn. "Export member forces CSV" saves the load case, element identity and both end forces.</p>
