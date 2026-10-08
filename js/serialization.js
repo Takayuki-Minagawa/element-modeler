@@ -12,6 +12,7 @@ import {
   hydrateSectionCatalog,
   hydrateSpringCatalog,
   normalizeMaterialEntry,
+  surfaceSpringSymbols,
 } from './section-catalog.js';
 import {
   createDefaultLevels,
@@ -33,7 +34,7 @@ function sanitizeText(value) {
   return typeof value === 'string' ? value.trim() : '';
 }
 
-export const CURRENT_SCHEMA_VERSION = 14;
+export const CURRENT_SCHEMA_VERSION = 15;
 const SUPPORTED_SCHEMA_VERSIONS = new Set(
   Array.from({ length: CURRENT_SCHEMA_VERSION }, (_, index) => index + 1)
 );
@@ -60,6 +61,9 @@ function usedSpringCatalog(state) {
     if (m.endJ?.condition === 'spring' && m.endJ.springSymbol) usedSymbols.add(m.endJ.springSymbol);
   }
   for (const section of usedSectionCatalog(state)) {
+    if (section.target === 'surface') {
+      for (const symbol of surfaceSpringSymbols(section)) usedSymbols.add(symbol);
+    }
     if (section.defaultEndI?.condition === 'spring' && section.defaultEndI.springSymbol) {
       usedSymbols.add(section.defaultEndI.springSymbol);
     }

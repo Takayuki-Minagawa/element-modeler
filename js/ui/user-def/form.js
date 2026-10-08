@@ -3,7 +3,7 @@ import { t } from '../../i18n.js';
 import { escapeHtml, markInputInvalid, clearInputInvalid } from '../../dom-utils.js';
 import { showNotice } from '../../notice.js';
 import { calculateSectionPropertiesFromShape, normalizeSectionShape } from '../../section-catalog.js';
-import { END_CONDITIONS, applyI18nTo, syncEndSpringVisibility, readEndPreset, readOptionalPositiveInput, readOptionalNonNegativeInput, readSpringStiffnessInput, readRequiredPositiveInput, readOptionalRatioInput, readSectionShapeInputs, calculatedIntegerProperties, applyCalculatedProperties, surfaceWeightFeedback } from './fields.js';
+import { END_CONDITIONS, applyI18nTo, syncEndSpringVisibility, readEndPreset, readOptionalPositiveInput, readOptionalNonNegativeInput, readSpringStiffnessInput, readRequiredPositiveInput, readOptionalRatioInput, readSectionShapeInputs, calculatedIntegerProperties, applyCalculatedProperties, surfaceWeightFeedback, renderOptionalSpringOptions } from './fields.js';
 
 export function createUserDefForm({ state, commands, onModelChange, refreshDraftSectionSelectors, onGroupChange }) {
   const userDefModal = document.getElementById('user-def-modal');
@@ -44,6 +44,11 @@ export function createUserDefForm({ state, commands, onModelChange, refreshDraft
   const userDefSelfWeightModeSelect = document.getElementById('user-def-self-weight-mode');
   const userDefAdditionalWeightInput = document.getElementById('user-def-additional-weight');
   const userDefSurfaceWeightPreview = document.getElementById('user-def-surface-weight-preview');
+  const userDefSurfacePanelGroup = document.getElementById('user-def-surface-panel-group');
+  const userDefPanelDirectionSelect = document.getElementById('user-def-panel-direction');
+  const userDefPanelEndSpringSelect = document.getElementById('user-def-panel-end-spring');
+  const userDefPanelToPanelSpringSelect = document.getElementById('user-def-panel-to-panel-spring');
+  const userDefPanelToBeamSpringSelect = document.getElementById('user-def-panel-to-beam-spring');
   const userDefEndPresetGroup = document.getElementById('user-def-end-preset-group');
   const userDefEndIConditionSelect = document.getElementById('user-def-endi-condition');
   const userDefEndJConditionSelect = document.getElementById('user-def-endj-condition');
@@ -55,6 +60,7 @@ export function createUserDefForm({ state, commands, onModelChange, refreshDraft
   const userDefKrYInput = document.getElementById('user-def-krY');
   const userDefKrZInput = document.getElementById('user-def-krZ');
   const userDefKtInput = document.getElementById('user-def-kt');
+  const userDefKvInput = document.getElementById('user-def-kv');
   const userDefMemoInput = document.getElementById('user-def-memo');
   const userDefMaterialNameInput = document.getElementById('user-def-material-name');
   const userDefEInput = document.getElementById('user-def-E');
@@ -79,6 +85,7 @@ export function createUserDefForm({ state, commands, onModelChange, refreshDraft
     clearInputInvalid(userDefSymbolInput);
     clearInputInvalid(userDefKrInput);
     clearInputInvalid(userDefKtInput);
+    clearInputInvalid(userDefKvInput);
     clearInputInvalid(userDefMaterialNameInput);
     clearInputInvalid(userDefEInput);
     clearInputInvalid(userDefGInput);
@@ -137,6 +144,7 @@ export function createUserDefForm({ state, commands, onModelChange, refreshDraft
     if (userDefShapeGroup) userDefShapeGroup.style.display = isMemberSection ? '' : 'none';
     if (userDefSectionMaterialGroup) userDefSectionMaterialGroup.style.display = isSection ? '' : 'none';
     if (userDefSurfaceWeightGroup) userDefSurfaceWeightGroup.hidden = !isSection || isMemberSection;
+    if (userDefSurfacePanelGroup) userDefSurfacePanelGroup.hidden = !isSection || isMemberSection;
     if (userDefPropertiesGroup) userDefPropertiesGroup.style.display = isMemberSection ? '' : 'none';
     if (userDefShearAreaRatioGroup) userDefShearAreaRatioGroup.style.display = isMemberSection ? '' : 'none';
     if (userDefEndPresetGroup) userDefEndPresetGroup.style.display = isMemberSection ? 'flex' : 'none';
@@ -210,6 +218,10 @@ export function createUserDefForm({ state, commands, onModelChange, refreshDraft
       if (userDefThicknessInput) userDefThicknessInput.value = section?.thickness ?? '';
       if (userDefSelfWeightModeSelect) userDefSelfWeightModeSelect.value = section?.selfWeightMode || '';
       if (userDefAdditionalWeightInput) userDefAdditionalWeightInput.value = section?.additionalWeight ?? '';
+      if (userDefPanelDirectionSelect) userDefPanelDirectionSelect.value = section?.panelDirection || '';
+      refreshOptionalSpringSelect(userDefPanelEndSpringSelect, section?.endRotationalSpring || '');
+      refreshOptionalSpringSelect(userDefPanelToPanelSpringSelect, section?.edgeSprings?.panelToPanel || '');
+      refreshOptionalSpringSelect(userDefPanelToBeamSpringSelect, section?.edgeSprings?.panelToBeam || '');
       refreshSurfaceWeightPreview();
     }
   }
@@ -243,6 +255,15 @@ export function createUserDefForm({ state, commands, onModelChange, refreshDraft
     refreshSpringSelectOptions(userDefEndJSpringSelect);
     syncEndSpringVisibility(userDefEndIConditionSelect, userDefEndISpringSelect);
     syncEndSpringVisibility(userDefEndJConditionSelect, userDefEndJSpringSelect);
+    for (const select of [userDefPanelEndSpringSelect, userDefPanelToPanelSpringSelect, userDefPanelToBeamSpringSelect]) {
+      refreshOptionalSpringSelect(select);
+    }
+  }
+
+  function refreshOptionalSpringSelect(select, selectedSymbol = select?.value || '') {
+    if (!select) return;
+    select.innerHTML = renderOptionalSpringOptions(state.listSprings(), selectedSymbol);
+    select.value = selectedSymbol;
   }
 
   // --- Form actions ---
@@ -255,7 +276,7 @@ export function createUserDefForm({ state, commands, onModelChange, refreshDraft
     if (userDefColorInput) userDefColorInput.value = '#666666';
     if (userDefBInput) userDefBInput.value = '200';
     if (userDefHInput) userDefHInput.value = '400';
-    for (const input of [userDefAInput, userDefIyInput, userDefIzInput, userDefJInput, userDefAvyInput, userDefAvzInput, userDefDesignationInput, userDefPropertySourceSelect, userDefKrYInput, userDefKrZInput, userDefThicknessInput, userDefSelfWeightModeSelect, userDefAdditionalWeightInput]) {
+    for (const input of [userDefAInput, userDefIyInput, userDefIzInput, userDefJInput, userDefAvyInput, userDefAvzInput, userDefDesignationInput, userDefPropertySourceSelect, userDefKrYInput, userDefKrZInput, userDefKvInput, userDefThicknessInput, userDefSelfWeightModeSelect, userDefAdditionalWeightInput, userDefPanelDirectionSelect, userDefPanelEndSpringSelect, userDefPanelToPanelSpringSelect, userDefPanelToBeamSpringSelect]) {
       if (input) input.value = '';
     }
     if (userDefSectionMemoInput) userDefSectionMemoInput.value = '';
@@ -406,6 +427,12 @@ export function createUserDefForm({ state, commands, onModelChange, refreshDraft
           thickness: thickness.value,
           selfWeightMode: userDefSelfWeightModeSelect?.value || null,
           additionalWeight: additionalWeight.value,
+          panelDirection: userDefPanelDirectionSelect?.value || null,
+          endRotationalSpring: userDefPanelEndSpringSelect?.value || null,
+          edgeSprings: {
+            panelToPanel: userDefPanelToPanelSpringSelect?.value || null,
+            panelToBeam: userDefPanelToBeamSpringSelect?.value || null,
+          },
         });
       }
     } else if (kind === 'spring') {
@@ -416,7 +443,7 @@ export function createUserDefForm({ state, commands, onModelChange, refreshDraft
       }
       const memo = userDefMemoInput?.value?.trim() || '';
       const stiffness = {};
-      for (const [key, input] of Object.entries({ kr: userDefKrInput, krY: userDefKrYInput, krZ: userDefKrZInput, kt: userDefKtInput })) {
+      for (const [key, input] of Object.entries({ kr: userDefKrInput, krY: userDefKrYInput, krZ: userDefKrZInput, kt: userDefKtInput, kv: userDefKvInput })) {
         const result = readSpringStiffnessInput(input);
         if (!result.valid) {
           showUserDefFormError(t('userDefInvalidStiffness'), input);

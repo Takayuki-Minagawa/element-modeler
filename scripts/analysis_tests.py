@@ -90,6 +90,23 @@ class CoreTests(unittest.TestCase):
         with self.assertRaisesRegex(ModelError, "only explicit rigid ends"):
             prepare(model, "LL")
 
+    def test_explicit_shear_and_panel_requirements_are_not_silently_ignored(self):
+        for value in (None, True):
+            model = cantilever()
+            model["analysisSettings"] = {"ignoreShearDeformation": value}
+            self.assertEqual(len(prepare(model, "LL")["elements"]), 1)
+        model["analysisSettings"]["ignoreShearDeformation"] = False
+        with self.assertRaisesRegex(ModelError, "Timoshenko"):
+            prepare(model, "LL")
+        model["analysisSettings"]["ignoreShearDeformation"] = "false"
+        with self.assertRaisesRegex(ModelError, "boolean or null"):
+            prepare(model, "LL")
+        model["analysisSettings"]["ignoreShearDeformation"] = True
+        for section in ({"endRotationalSpring": "P"}, {"edgeSprings": {"panelToPanel": "K"}}):
+            model["surfaceSections"] = [section]
+            with self.assertRaisesRegex(ModelError, "floor-model adapter"):
+                prepare(model, "LL")
+
     def test_duplicate_keys_fail(self):
         with tempfile.TemporaryDirectory() as folder:
             path = Path(folder) / "bad.json"

@@ -1,7 +1,7 @@
 import { t } from '../../i18n.js';
 import { escapeHtml, markInputInvalid, clearInputInvalid } from '../../dom-utils.js';
 import { calculateSurfaceUnitWeight } from '../../surface-weight.js';
-import { surfaceWeightFeedback } from '../user-def/fields.js';
+import { surfaceWeightFeedback, springReferenceLabel } from '../user-def/fields.js';
 
 import { isGableWallSurfaceType, isSlopedSurfaceType, isWallSurfaceType } from '../../domain/model.js';
 import { DEFAULT_EAVE_DEPTH_MM, DEFAULT_RAFTER_SPACING_MM, DEFAULT_ROOF_GROUP_ID } from '../../constants.js';
@@ -127,6 +127,19 @@ export const surfaceProperties = {
         <input id="prop-surface-additional-weight" type="text" value="${escapeHtml(weightSection?.additionalWeight ?? t('userDefUnspecified'))}" readonly>
       </div>
       <p id="prop-surface-weight-note" class="quantity-note">${escapeHtml(surfaceWeightFeedback(weightSection, weightMaterial))}</p>
+      <div class="prop-group">
+        <label for="prop-surface-panel-direction">${t('userDefPanelDirection')}</label>
+        <input id="prop-surface-panel-direction" type="text" value="${escapeHtml(weightSection?.panelDirection?.toUpperCase() || t('userDefUnspecified'))}" readonly>
+      </div>
+      ${[
+        ['end-spring', 'userDefPanelEndSpring', weightSection?.endRotationalSpring],
+        ['panel-to-panel-spring', 'userDefPanelToPanelSpring', weightSection?.edgeSprings?.panelToPanel],
+        ['panel-to-beam-spring', 'userDefPanelToBeamSpring', weightSection?.edgeSprings?.panelToBeam],
+      ].map(([id, label, symbol]) => `
+      <div class="prop-group">
+        <label for="prop-surface-${id}">${t(label)}</label>
+        <input id="prop-surface-${id}" type="text" value="${escapeHtml(springReferenceLabel(symbol, this.state.listSprings()))}" readonly>
+      </div>`).join('')}
       ${isWindSurface ? `
       <div class="prop-group">
         <label class="prop-check-label">

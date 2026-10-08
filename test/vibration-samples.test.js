@@ -18,7 +18,7 @@ for (const [name, members, nodes, surfaces] of [['simple', 1, 2, 1], ['split', 2
     const original = fixture(name);
     const state = new AppState();
     applyModelImport(original, state);
-    assert.equal(state.schemaVersion, 14);
+    assert.equal(state.schemaVersion, 15);
     assert.equal(state.members.length, members);
     assert.equal(state.nodes.length, nodes);
     assert.equal(state.surfaces.length, surfaces);

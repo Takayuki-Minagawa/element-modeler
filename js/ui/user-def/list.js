@@ -91,6 +91,12 @@ export function createUserDefList({ state, commands, getGroup, onModelChange, re
     } else {
       patch.material = row.querySelector('[data-field="material"]')?.value || null;
       patch.selfWeightMode = row.querySelector('[data-field="selfWeightMode"]')?.value || null;
+      patch.panelDirection = row.querySelector('[data-field="panelDirection"]')?.value || null;
+      patch.endRotationalSpring = row.querySelector('[data-field="endRotationalSpring"]')?.value || null;
+      patch.edgeSprings = {
+        panelToPanel: row.querySelector('[data-field="panelToPanel"]')?.value || null,
+        panelToBeam: row.querySelector('[data-field="panelToBeam"]')?.value || null,
+      };
       for (const field of ['thickness', 'additionalWeight']) {
         const input = row.querySelector(`[data-field="${field}"]`);
         const result = field === 'thickness' ? readOptionalPositiveInput(input) : readOptionalNonNegativeInput(input);
@@ -156,7 +162,7 @@ export function createUserDefList({ state, commands, getGroup, onModelChange, re
     if (!row) return;
     const memo = row.querySelector('[data-field="memo"]')?.value || '';
     const stiffness = {};
-    for (const field of ['kr', 'krY', 'krZ', 'kt']) {
+    for (const field of ['kr', 'krY', 'krZ', 'kt', 'kv']) {
       const input = row.querySelector(`[data-field="${field}"]`);
       clearInputInvalid(input);
       const result = readSpringStiffnessInput(input);

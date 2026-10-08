@@ -6,10 +6,10 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
-  <title>Element Modeler - Ver.1.7.0</title>
+  <title>Element Modeler - Ver.1.8.0</title>
   <link rel="help" href="docs/coordinate-input.md" type="text/markdown">
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
-  <link rel="stylesheet" href="style.css?v=1.7.0">
+  <link rel="stylesheet" href="style.css?v=1.8.0">
 </head>
 <body>
 <header id="app-header">
@@ -282,7 +282,7 @@
       <span id="status-zoom">Zoom: 100%</span>
       <span id="status-tool" data-i18n="toolMember">ツール: 線材</span>
       <div id="recovery-tools"></div>
-      <span id="status-version">Ver.1.7.0</span>
+      <span id="status-version">Ver.1.8.0</span>
     </footer>
   </main>
   <div id="property-resizer" class="side-resizer side-resizer-right" role="separator" aria-label="Resize properties" aria-orientation="vertical">
@@ -724,6 +724,30 @@
             </div>
             <p id="user-def-surface-weight-preview" class="quantity-note" aria-live="polite"></p>
           </div>
+          <div id="user-def-surface-panel-group" hidden>
+            <div class="settings-group">
+              <label for="user-def-panel-direction" data-i18n="userDefPanelDirection">パネル長手方向</label>
+              <select id="user-def-panel-direction" aria-describedby="user-def-panel-direction-hint">
+                <option value="" data-i18n="userDefUnspecified">未入力</option>
+                <option value="x">X</option>
+                <option value="y">Y</option>
+              </select>
+            </div>
+            <p id="user-def-panel-direction-hint" class="quantity-note" data-i18n="userDefPanelDirectionHint">荷重方向とは別に設定します。未入力はパネル長手方向を指定しません。</p>
+            <div class="settings-group">
+              <label for="user-def-panel-end-spring" data-i18n="userDefPanelEndSpring">パネル端回転ばね</label>
+              <select id="user-def-panel-end-spring"></select>
+            </div>
+            <div class="settings-group">
+              <label for="user-def-panel-to-panel-spring" data-i18n="userDefPanelToPanelSpring">パネル間鉛直ばね</label>
+              <select id="user-def-panel-to-panel-spring"></select>
+            </div>
+            <div class="settings-group">
+              <label for="user-def-panel-to-beam-spring" data-i18n="userDefPanelToBeamSpring">パネル・梁間鉛直ばね</label>
+              <select id="user-def-panel-to-beam-spring"></select>
+            </div>
+            <p class="quantity-note" data-i18n="userDefPanelConnectionHint">ばね定義の記号を参照します。空欄は未入力です。</p>
+          </div>
           <div id="user-def-shear-area-ratio-group">
             <p class="quantity-note" data-i18n="userDefShearAreaRatioHint">せん断用断面積の比率を 0 より大きく 1 以下の小数で入力します。空欄は未定義です。</p>
             <div class="prop-row">
@@ -790,6 +814,10 @@
           </div>
           <p id="user-def-stiffness-hint" class="quantity-note" data-i18n="userDefStiffnessHint">正の数値、pin（ピン）、rigid（剛）を入力。空欄は未入力。方向別は部材ローカル軸回りの曲げで、空欄の場合は共通 kr を使います。</p>
           <div class="settings-group">
+            <label for="user-def-kv" data-i18n="userDefKv">鉛直並進 kv (N/mm)</label>
+            <input id="user-def-kv" type="text" placeholder="2.5e3 / pin / rigid" aria-describedby="user-def-stiffness-hint">
+          </div>
+          <div class="settings-group">
             <label data-i18n="userDefMemo">メモ</label>
             <input id="user-def-memo" type="text" placeholder="">
           </div>
@@ -854,6 +882,15 @@
             <option value="includedInDL" data-i18n="analysisSelfWeightDL">DLに含む（密度からは算定しない）</option>
           </select>
         </div>
+        <div class="settings-group">
+          <label for="analysis-ignore-shear-deformation" data-i18n="analysisIgnoreShearDeformation">せん断変形</label>
+          <select id="analysis-ignore-shear-deformation" aria-describedby="analysis-shear-deformation-hint">
+            <option value="" data-i18n="analysisShearUnspecified">未指定</option>
+            <option value="true" data-i18n="analysisShearIgnored">無視（Euler–Bernoulli）</option>
+            <option value="false" data-i18n="analysisShearConsidered">考慮（Timoshenko）</option>
+          </select>
+        </div>
+        <p id="analysis-shear-deformation-hint" class="quantity-note" data-i18n="analysisShearDeformationHint">未指定は解析側の既定に従います。対応する解析器で使用してください。</p>
         <p id="analysis-settings-error" class="form-error" hidden></p>
         <p class="quantity-note" data-i18n="analysisDefaultsTrial">組み込み値は試行用です。解析前に確認してください。</p>
         <div class="support-preset-row">
@@ -956,6 +993,6 @@
     }
   }
   </script>
-  <script type="module" src="js/app.js?v=1.7.0"></script>
+  <script type="module" src="js/app.js?v=1.8.0"></script>
 </body>
 </html>

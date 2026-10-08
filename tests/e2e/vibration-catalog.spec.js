@@ -68,6 +68,10 @@ test('directional stiffness supports scientific numbers, pin/rigid, validation a
   await page.locator('#btn-user-def-add').click();
   await expect(page.locator('#user-def-form-error')).toContainText('0・負値');
   await page.locator('#user-def-krY').fill('pin');
+  await page.locator('#user-def-kv').fill('0');
+  await page.locator('#btn-user-def-add').click();
+  await expect(page.locator('#user-def-form-error')).toContainText('0・負値');
+  await page.locator('#user-def-kv').fill('2.5e3');
   await reviewScreenshot(page, 'vibration-directional-spring-form');
   await page.locator('#btn-user-def-add').click();
   await expect(page.locator('#user-def-form-error')).toBeHidden();
@@ -81,11 +85,12 @@ test('directional stiffness supports scientific numbers, pin/rigid, validation a
   await expect(row.locator('[data-field="krY"]')).toHaveClass(/input-error/);
   await row.locator('[data-field="krY"]').fill('2e7');
   await row.locator('[data-field="kt"]').fill('pin');
+  await row.locator('[data-field="kv"]').fill('rigid');
   await row.locator('[data-action="save-spring"]').click();
   await closeDefinitions(page, true);
-  expect((await savedDefinitions(page)).springs.find(s => s.symbol === 'directional')).toMatchObject({ kr: 4e7, krY: 2e7, krZ: 'rigid', kt: 'pin' });
+  expect((await savedDefinitions(page)).springs.find(s => s.symbol === 'directional')).toMatchObject({ kr: 4e7, krY: 2e7, krZ: 'rigid', kt: 'pin', kv: 'rigid' });
   await page.getByRole('button', { name: '元に戻す', exact: true }).click();
-  expect((await savedDefinitions(page)).springs.find(s => s.symbol === 'directional')).toMatchObject({ kr: 4e7, krY: 'pin', krZ: 'rigid', kt: null });
+  expect((await savedDefinitions(page)).springs.find(s => s.symbol === 'directional')).toMatchObject({ kr: 4e7, krY: 'pin', krZ: 'rigid', kt: null, kv: 2500 });
 });
 
 test('section source, designation and absolute shear areas are editable and calculation marks provenance', async ({ page }) => {
@@ -167,3 +172,100 @@ for (const filename of ['simple.json', 'split.json']) {
     expect((await savedModel(page)).surfaces[0].unitWeight).toBe(sample.surfaces[0].unitWeight);
   });
 }
+
+test('panel metadata is editable independently of load direction and retains referenced vertical springs', async ({ page }) => {
+  const sample = await loadSample(page, 'simple.json');
+  await openDefinitions(page);
+  await page.locator('#user-def-kind').selectOption('spring');
+  await page.locator('#user-def-symbol').fill('PanelVertical');
+  await page.locator('#user-def-kv').fill('2.5e3');
+  await page.locator('#btn-user-def-add').click();
+  await page.locator('#user-def-target').selectOption('surface');
+  await page.locator('#user-def-name').fill('PanelSurface');
+  await page.locator('#user-def-section-material').selectOption('SyntheticPanel');
+  await expect(page.locator('#user-def-panel-end-spring')).toHaveValue('');
+  await page.locator('#user-def-panel-direction').selectOption('y');
+  await page.locator('#user-def-panel-end-spring').selectOption('SyntheticEnd');
+  await page.locator('#user-def-panel-to-panel-spring').selectOption('PanelVertical');
+  await page.locator('#user-def-panel-to-beam-spring').selectOption('PanelVertical');
+  await page.locator('#user-def-panel-to-beam-spring').scrollIntoViewIfNeeded();
+  await reviewScreenshot(page, 'vibration-panel-connection-form');
+  await page.locator('#btn-user-def-add').click();
+  await closeDefinitions(page);
+  expect((await savedDefinitions(page)).sections.find(s => s.name === 'PanelSurface')).toMatchObject({
+    panelDirection: 'y', endRotationalSpring: 'SyntheticEnd',
+    edgeSprings: { panelToPanel: 'PanelVertical', panelToBeam: 'PanelVertical' },
+  });
+  await selectSurface(page, sample.surfaces[0].id);
+  await page.locator('#prop-surface-section').selectOption('PanelSurface');
+  await expect(page.locator('#prop-surface-panel-direction')).toHaveValue('Y');
+  await expect(page.locator('#prop-surface-end-spring')).toHaveValue('SyntheticEnd');
+  await expect(page.locator('#prop-surface-panel-to-panel-spring')).toHaveValue('PanelVertical');
+  await expect(page.locator('#prop-surface-panel-to-beam-spring')).toHaveValue('PanelVertical');
+  const assigned = await savedModel(page);
+  expect(assigned.surfaces[0].loadDirection).toBe(sample.surfaces[0].loadDirection);
+  expect(assigned.springCatalog.find(s => s.symbol === 'PanelVertical')).toMatchObject({ kv: 2500 });
+  await openDefinitions(page);
+  await page.locator('#user-def-kind').selectOption('spring');
+  await page.locator('#btn-user-def-list').click();
+  const springRow = page.locator('#user-def-list-body tr').filter({ has: page.locator('button[data-symbol="PanelVertical"]') });
+  page.once('dialog', dialog => dialog.accept());
+  await springRow.locator('[data-action="remove-spring"]').click();
+  await expect(page.locator('.app-notice-error')).toContainText('使用中');
+  await expect(springRow).toBeVisible();
+  await page.locator('#btn-user-def-list-close').click();
+  await page.locator('#user-def-kind').selectOption('section');
+  await page.locator('#user-def-target').selectOption('surface');
+  await page.locator('#btn-user-def-list').click();
+  const row = page.locator('#user-def-list-body tr').filter({ has: page.locator('button[data-name="PanelSurface"]') });
+  await row.locator('[data-field="panelToBeam"]').scrollIntoViewIfNeeded();
+  await reviewScreenshot(page, 'vibration-panel-connection-table');
+  await row.locator('[data-field="panelDirection"]').selectOption('');
+  await row.locator('[data-field="panelToPanel"]').selectOption('');
+  await row.locator('[data-action="save-section"]').click();
+  await closeDefinitions(page, true);
+  await expect(page.locator('#prop-surface-panel-direction')).toHaveValue('未入力');
+  await expect(page.locator('#prop-surface-panel-to-panel-spring')).toHaveValue('未入力');
+  const cleared = await savedModel(page);
+  expect(cleared.surfaces[0].loadDirection).toBe(sample.surfaces[0].loadDirection);
+  expect(cleared.sectionCatalog.find(s => s.name === 'PanelSurface')).toMatchObject({
+    panelDirection: null, endRotationalSpring: 'SyntheticEnd',
+    edgeSprings: { panelToPanel: null, panelToBeam: 'PanelVertical' },
+  });
+  await page.getByRole('button', { name: '元に戻す', exact: true }).click();
+  expect((await savedModel(page)).sectionCatalog.find(s => s.name === 'PanelSurface')).toMatchObject({
+    panelDirection: 'y', endRotationalSpring: 'SyntheticEnd',
+    edgeSprings: { panelToPanel: 'PanelVertical', panelToBeam: 'PanelVertical' },
+  });
+});
+
+test('unresolved panel spring references remain visible and survive unrelated catalog edits', async ({ page }) => {
+  const model = JSON.parse(await readFile(new URL('../../test/fixtures/vibration/simple.schema13.json', import.meta.url), 'utf8'));
+  model.schemaVersion = 15;
+  Object.assign(model.sectionCatalog.find(s => s.name === 'SyntheticFloor'), {
+    panelDirection: null, endRotationalSpring: 'MissingRotation',
+    edgeSprings: { panelToPanel: 'MissingJoint', panelToBeam: null },
+  });
+  await page.locator('#file-import').setInputFiles({ name: 'unresolved-synthetic.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(model)) });
+  await expect(page.locator('.app-notice-success')).toBeVisible();
+  await openDefinitions(page);
+  await page.locator('#user-def-target').selectOption('surface');
+  await page.locator('#btn-user-def-list').click();
+  const row = page.locator('#user-def-list-body tr').filter({ has: page.locator('button[data-name="SyntheticFloor"]') });
+  await expect(row.locator('[data-field="endRotationalSpring"]')).toHaveValue('MissingRotation');
+  await expect(row.locator('[data-field="endRotationalSpring"] option:checked')).toHaveText('MissingRotation (未登録)');
+  await expect(row.locator('[data-field="panelToPanel"]')).toHaveValue('MissingJoint');
+  await expect(row.locator('[data-field="panelToBeam"]')).toHaveValue('');
+  await row.locator('[data-field="memo"]').fill('Keep unresolved symbols');
+  await row.locator('[data-action="save-section"]').click();
+  await closeDefinitions(page, true);
+  const saved = await savedModel(page);
+  expect(saved.sectionCatalog.find(s => s.name === 'SyntheticFloor')).toMatchObject({
+    panelDirection: null, endRotationalSpring: 'MissingRotation',
+    edgeSprings: { panelToPanel: 'MissingJoint', panelToBeam: null },
+    memo: 'Keep unresolved symbols',
+  });
+  await selectSurface(page, model.surfaces[0].id);
+  await expect(page.locator('#prop-surface-end-spring')).toHaveValue('MissingRotation (未登録)');
+  await expect(page.locator('#prop-surface-panel-to-panel-spring')).toHaveValue('MissingJoint (未登録)');
+});

@@ -213,9 +213,33 @@ export function buildAnalysisModel(state, options = {}) {
       : null;
   }
 
+  // Panel definitions remain explicit exchange data. This exporter does not
+  // turn surfaces into beam/shell elements or invent panel-to-beam constraints.
+  const surfaceKey = (type, name) => JSON.stringify([type, name]);
+  const usedSurfaceKeys = new Set(state.surfaces.map(surface => surfaceKey(surface.type, surface.sectionName)));
+  const surfaceSections = state.sectionCatalog
+    .filter(section => section.target === 'surface' && usedSurfaceKeys.has(surfaceKey(section.type, section.name)))
+    .map(section => ({
+      name: section.name, type: section.type, material: section.material || null,
+      thickness: section.thickness ?? null,
+      selfWeightMode: section.selfWeightMode ?? null,
+      additionalWeight: section.additionalWeight === null || section.additionalWeight === undefined
+        ? null : section.additionalWeight / 1e6,
+      panelDirection: section.panelDirection ?? null,
+      endRotationalSpring: section.endRotationalSpring ?? null,
+      edgeSprings: { panelToPanel: section.edgeSprings?.panelToPanel ?? null,
+        panelToBeam: section.edgeSprings?.panelToBeam ?? null },
+    }));
+  const surfaces = state.surfaces.map(surface => ({
+    ...structuredClone(surface), sourceId: surface.id,
+    unitWeight: surface.unitWeight === null || surface.unitWeight === undefined ? null : surface.unitWeight / 1e6,
+    z: state.getLevelZ(surface.levelId),
+  }));
+
   const usedMaterialNames = new Set([
     ...elements.map(element => element.material).filter(Boolean),
     ...sections.map(section => section.material).filter(Boolean),
+    ...surfaceSections.map(section => section.material).filter(Boolean),
   ]);
   const materialByName = new Map(
     (state.materialCatalog || []).map(material => [material.name, material])
@@ -232,10 +256,21 @@ export function buildAnalysisModel(state, options = {}) {
   });
 
   const usedSpringSymbols = new Set();
+  const memberSpringSymbols = new Set();
   for (const e of elements) {
-    if (e.endI.springSymbol) usedSpringSymbols.add(e.endI.springSymbol);
-    if (e.endJ.springSymbol) usedSpringSymbols.add(e.endJ.springSymbol);
+    if (e.endI.springSymbol) memberSpringSymbols.add(e.endI.springSymbol);
+    if (e.endJ.springSymbol) memberSpringSymbols.add(e.endJ.springSymbol);
   }
+  for (const symbol of memberSpringSymbols) usedSpringSymbols.add(symbol);
+  const panelEndSymbols = new Set();
+  const panelEdgeSymbols = new Set();
+  for (const section of surfaceSections) {
+    if (section.endRotationalSpring) panelEndSymbols.add(section.endRotationalSpring);
+    for (const symbol of Object.values(section.edgeSprings)) {
+      if (symbol) panelEdgeSymbols.add(symbol);
+    }
+  }
+  for (const symbol of [...panelEndSymbols, ...panelEdgeSymbols]) usedSpringSymbols.add(symbol);
   const springs = state.springCatalog
     .filter(s => usedSpringSymbols.has(s.symbol))
     .map(s => ({
@@ -244,14 +279,20 @@ export function buildAnalysisModel(state, options = {}) {
       krY: normalizeSpringStiffness(s.krY),
       krZ: normalizeSpringStiffness(s.krZ),
       kt: normalizeSpringStiffness(s.kt),
+      kv: normalizeSpringStiffness(s.kv),
       memo: s.memo || '',
       isDefault: !!s.isDefault,
     }));
 
   const analysisSettings = normalizeAnalysisSettings(state.analysisSettings);
-  const undefinedSpringSymbols = springs
-    .filter(spring => (spring.krY ?? spring.kr) === null || (spring.krZ ?? spring.kr) === null)
-    .map(spring => spring.symbol);
+  const springBySymbol = new Map(springs.map(spring => [spring.symbol, spring]));
+  const undefinedSpringSymbols = [...usedSpringSymbols].filter(symbol => {
+    const spring = springBySymbol.get(symbol);
+    if (!spring) return true;
+    if (memberSpringSymbols.has(symbol) && ((spring.krY ?? spring.kr) === null || (spring.krZ ?? spring.kr) === null)) return true;
+    if (panelEndSymbols.has(symbol) && (spring.krY ?? spring.kr) === null) return true;
+    return panelEdgeSymbols.has(symbol) && spring.kv === null;
+  });
   const undefinedMassSourceCases = LOAD_CASES.filter(
     loadCase => analysisSettings.massSources[loadCase] === null
   );
@@ -302,12 +343,15 @@ export function buildAnalysisModel(state, options = {}) {
     nodes: pool.nodes,
     elements,
     sections,
+    surfaceSections,
+    surfaces,
     materials,
     springs,
     supports,
     loadCases: LOAD_CASES.slice(),
     loads,
     massSources: { ...analysisSettings.massSources },
+    analysisSettings: { ignoreShearDeformation: analysisSettings.ignoreShearDeformation },
     selfWeight: {
       mode: analysisSettings.selfWeightMode,
       isDefault: analysisSettings.selfWeightMode === 'fromDensity',
@@ -406,10 +450,20 @@ export function buildAnalysisCSV(state, options = {}) {
       String(material.density ?? ''), material.isDefault ? '1' : '0');
   }
   push('spring_header', 'symbol', 'memo', 'kr_N_mm_rad', 'kt_N_mm', 'is_default',
-    'krY_N_mm_rad', 'krZ_N_mm_rad');
+    'krY_N_mm_rad', 'krZ_N_mm_rad', 'kv_N_mm');
   for (const s of model.springs) {
     push('spring', s.symbol, s.memo, String(s.kr ?? ''), String(s.kt ?? ''), s.isDefault ? '1' : '0',
-      String(s.krY ?? ''), String(s.krZ ?? ''));
+      String(s.krY ?? ''), String(s.krZ ?? ''), String(s.kv ?? ''));
+  }
+  push('surface_sect_header', 'name', 'type', 'material', 'thickness_mm', 'self_weight_mode',
+    'additional_weight_N_mm2', 'panel_direction', 'end_rotational_spring', 'panel_to_panel_spring', 'panel_to_beam_spring');
+  for (const s of model.surfaceSections || []) {
+    push('surface_sect', s.name, s.type, s.material, s.thickness, s.selfWeightMode, s.additionalWeight,
+      s.panelDirection, s.endRotationalSpring, s.edgeSprings.panelToPanel, s.edgeSprings.panelToBeam);
+  }
+  push('surface_header', 'id', 'type', 'section', 'level_id', 'z_mm', 'unit_weight_N_mm2', 'cad_geometry_json');
+  for (const s of model.surfaces || []) {
+    push('surface', s.sourceId, s.type, s.sectionName, s.levelId, s.z, s.unitWeight, JSON.stringify(s));
   }
   push('support_header', 'id', 'node', 'dx', 'dy', 'dz', 'rx', 'ry', 'rz', 'source_id');
   for (const s of model.supports) {
@@ -432,6 +486,8 @@ export function buildAnalysisCSV(state, options = {}) {
   }
   push('self_weight_header', 'mode', 'is_default');
   push('self_weight', model.selfWeight.mode, model.selfWeight.isDefault ? '1' : '0');
+  push('analysis_setting_header', 'key', 'value');
+  push('analysis_setting', 'ignore_shear_deformation', model.analysisSettings?.ignoreShearDeformation ?? '');
   push('combo_header', 'id', 'name', 'factors');
   for (const c of model.loadCombinations) {
     const factors = Object.entries(c.factors).map(([k, v]) => `${k}=${v}`).join(';');

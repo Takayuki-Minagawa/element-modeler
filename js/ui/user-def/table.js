@@ -2,7 +2,7 @@
 import { t } from '../../i18n.js';
 import { escapeHtml } from '../../dom-utils.js';
 import { normalizeSectionShape } from '../../section-catalog.js';
-import { renderEndPresetCell, renderPropertySourceOptions, renderSelfWeightModeOptions, surfaceWeightFeedback } from './fields.js';
+import { renderEndPresetCell, renderPropertySourceOptions, renderSelfWeightModeOptions, surfaceWeightFeedback, renderOptionalSpringOptions, renderPanelDirectionOptions, springReferenceLabel } from './fields.js';
 
 const BUILT_IN_MATERIAL_NAMES = new Set(['steel', 'rc', 'wood']);
 
@@ -69,6 +69,16 @@ export function renderCatalogTable({ group, items, materials = [], springs = [] 
     return `<select class="user-def-table-input" data-field="selfWeightMode">${renderSelfWeightModeOptions(item.selfWeightMode)}</select>`;
   }
 
+  function renderPanelDirectionCell(item) {
+    if (item.isDefault) return escapeHtml(item.panelDirection?.toUpperCase() || t('userDefUnspecified'));
+    return `<select class="user-def-table-input" data-field="panelDirection">${renderPanelDirectionOptions(item.panelDirection)}</select>`;
+  }
+
+  function renderPanelSpringCell(item, field, symbol) {
+    if (item.isDefault) return escapeHtml(springReferenceLabel(symbol, springs));
+    return `<select class="user-def-table-input" data-field="${field}">${renderOptionalSpringOptions(springs, symbol)}</select>`;
+  }
+
   function renderShapeOptions(selectedShape) {
     const shape = normalizeSectionShape(selectedShape);
     return [
@@ -124,6 +134,7 @@ export function renderCatalogTable({ group, items, materials = [], springs = [] 
       { header: t('userDefKrY'), cell: s => renderStiffnessCell(s, 'krY') },
       { header: t('userDefKrZ'), cell: s => renderStiffnessCell(s, 'krZ') },
       { header: t('userDefKt'), cell: s => renderStiffnessCell(s, 'kt') },
+      { header: t('userDefKv'), cell: s => renderStiffnessCell(s, 'kv') },
       { header: t('userDefListColMemo'), cell: renderMemoCell },
       { header: t('userDefListColDefault'), cell: renderDefaultFlagCell },
       {
@@ -171,6 +182,10 @@ export function renderCatalogTable({ group, items, materials = [], springs = [] 
         { header: t('userDefSelfWeightMode'), cell: renderSelfWeightModeCell },
         { header: t('userDefAdditionalWeight'), cell: s => renderOptionalNumberCell(s, 'additionalWeight') },
         { header: `${t('unitWeight')} (N/m²)`, cell: s => `<span data-field="weightPreview" aria-live="polite">${escapeHtml(surfaceWeightFeedback(s, materials.find(material => material.name === s.material)))}</span>` },
+        { header: t('userDefPanelDirection'), cell: renderPanelDirectionCell },
+        { header: t('userDefPanelEndSpring'), cell: s => renderPanelSpringCell(s, 'endRotationalSpring', s.endRotationalSpring) },
+        { header: t('userDefPanelToPanelSpring'), cell: s => renderPanelSpringCell(s, 'panelToPanel', s.edgeSprings?.panelToPanel) },
+        { header: t('userDefPanelToBeamSpring'), cell: s => renderPanelSpringCell(s, 'panelToBeam', s.edgeSprings?.panelToBeam) },
       );
     }
     columns.push(
@@ -211,6 +226,7 @@ export function renderCatalogTable({ group, items, materials = [], springs = [] 
   function renderUserDefListTable(items, columns) {
     return `
       <p><b>${t('userDefListGroup')}:</b> ${escapeHtml(currentUserDefGroupLabel())}</p>
+      <div class="user-def-table-scroll">
       <table>
         <thead>
           <tr>
@@ -225,6 +241,7 @@ export function renderCatalogTable({ group, items, materials = [], springs = [] 
           `).join('')}
         </tbody>
       </table>
+      </div>
     `;
   }
 

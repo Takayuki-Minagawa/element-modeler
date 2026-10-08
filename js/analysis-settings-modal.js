@@ -10,6 +10,7 @@ export function initAnalysisSettingsModal({ state, onSave }) {
   const form = document.getElementById('analysis-settings-form');
   const massSourceList = document.getElementById('analysis-mass-source-list');
   const selfWeightSelect = document.getElementById('analysis-self-weight-mode');
+  const shearSelect = document.getElementById('analysis-ignore-shear-deformation');
   const errorEl = document.getElementById('analysis-settings-error');
 
   function applyI18n() {
@@ -47,6 +48,10 @@ export function initAnalysisSettingsModal({ state, onSave }) {
     if (selfWeightSelect) {
       selfWeightSelect.value = state.analysisSettings?.selfWeightMode || 'fromDensity';
     }
+    if (shearSelect) {
+      const value = state.analysisSettings?.ignoreShearDeformation;
+      shearSelect.value = typeof value === 'boolean' ? String(value) : '';
+    }
     modal?.classList.add('visible');
   }
 
@@ -62,6 +67,10 @@ export function initAnalysisSettingsModal({ state, onSave }) {
     let invalidInput = null;
     massSourceList?.querySelectorAll('[data-load-case]').forEach(input => {
       const raw = input.value.trim();
+      if (input.validity?.badInput) {
+        invalidInput ||= input;
+        return;
+      }
       if (raw === '') {
         massSources[input.dataset.loadCase] = null;
         return;
@@ -86,6 +95,8 @@ export function initAnalysisSettingsModal({ state, onSave }) {
     onSave({
       massSources,
       selfWeightMode: selfWeightSelect?.value || 'fromDensity',
+      ignoreShearDeformation: shearSelect?.value === 'true' ? true
+        : shearSelect?.value === 'false' ? false : null,
     });
     hide();
   });

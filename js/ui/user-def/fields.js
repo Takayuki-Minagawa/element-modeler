@@ -41,6 +41,28 @@ export function renderSpringOptions(springs, selectedSymbol = '') {
   ).join('');
 }
 
+export function springReferenceLabel(symbol, springs) {
+  if (!symbol) return t('userDefUnspecified');
+  return springs.some(spring => spring.symbol === symbol)
+    ? symbol : `${symbol} (${t('userDefSpringMissing')})`;
+}
+
+export function renderOptionalSpringOptions(springs, selectedSymbol = '') {
+  const selected = selectedSymbol || '';
+  const symbols = springs.map(spring => spring.symbol);
+  if (selected && !symbols.includes(selected)) symbols.unshift(selected);
+  return ['', ...symbols].map(symbol =>
+    `<option value="${escapeHtml(symbol)}" ${symbol === selected ? 'selected' : ''}>${escapeHtml(springReferenceLabel(symbol, springs))}</option>`
+  ).join('');
+}
+
+export function renderPanelDirectionOptions(selectedDirection) {
+  const selected = selectedDirection || '';
+  return [['', t('userDefUnspecified')], ['x', 'X'], ['y', 'Y']].map(([value, label]) =>
+    `<option value="${value}" ${value === selected ? 'selected' : ''}>${escapeHtml(label)}</option>`
+  ).join('');
+}
+
 export function renderEndPresetCell(endInfo, fieldPrefix, editable, springs) {
   const condition = END_CONDITIONS.includes(endInfo?.condition) ? endInfo.condition : 'pin';
   const springSymbol = endInfo?.springSymbol || springs[0]?.symbol || '';

@@ -19,7 +19,7 @@ export const DEFAULT_SECTION_DEFINITIONS = [
 ];
 
 export const DEFAULT_SPRING_DEFINITIONS = [
-  { symbol: '_SP', kr: null, krY: null, krZ: null, kt: null, memo: '回転バネ', isDefault: true },
+  { symbol: '_SP', kr: null, krY: null, krZ: null, kt: null, kv: null, memo: '回転バネ', isDefault: true },
 ];
 
 // Trial defaults for analysis-model preparation. They are intentionally
@@ -38,6 +38,7 @@ export const END_FIXITIES = new Set(['pin', 'rigid', 'spring']);
 export const SECTION_SHAPES = new Set(['rectangle', 'hSection', 'boxSection']);
 export const SECTION_PROPERTY_SOURCES = new Set(['catalog', 'computed', 'manual']);
 export const SURFACE_SELF_WEIGHT_MODES = new Set(['manual', 'fromDensity']);
+export const PANEL_DIRECTIONS = new Set(['x', 'y']);
 export const MEMBER_SECTION_TYPE_ALIAS = {
   brace: 'hbrace',
 };
@@ -74,7 +75,11 @@ export function createDefaultSectionCatalog() {
       propertySource: null,
       Avy: null,
       Avz: null,
-    } : { thickness: null, selfWeightMode: null, additionalWeight: null }),
+    } : {
+      thickness: null, selfWeightMode: null, additionalWeight: null,
+      panelDirection: null, endRotationalSpring: null,
+      edgeSprings: { panelToPanel: null, panelToBeam: null },
+    }),
     defaultEndI: s.defaultEndI ? { ...s.defaultEndI } : undefined,
     defaultEndJ: s.defaultEndJ ? { ...s.defaultEndJ } : undefined,
   }));
@@ -138,6 +143,9 @@ export function normalizeCatalogSectionEntry(entry) {
     if (!isValidOptionalChoice(entry.selfWeightMode, SURFACE_SELF_WEIGHT_MODES)) {
       throw new Error(`Invalid surface self weight mode: ${name}`);
     }
+    if (!isValidOptionalChoice(entry.panelDirection, PANEL_DIRECTIONS)) {
+      throw new Error(`Invalid panel direction: ${name}`);
+    }
   }
 
   const normalized = {
@@ -171,6 +179,9 @@ export function normalizeCatalogSectionEntry(entry) {
     normalized.thickness = optionalPositiveNumber(entry.thickness);
     normalized.selfWeightMode = sanitizeText(entry.selfWeightMode) || null;
     normalized.additionalWeight = isBlank(entry.additionalWeight) ? null : Number(entry.additionalWeight);
+    normalized.panelDirection = sanitizeText(entry.panelDirection) || null;
+    normalized.endRotationalSpring = normalizeSpringReference(entry.endRotationalSpring, `endRotationalSpring: ${name}`);
+    normalized.edgeSprings = normalizeEdgeSprings(entry.edgeSprings, name);
   }
   return normalized;
 }
@@ -180,7 +191,7 @@ export function normalizeSpringEntry(entry) {
   const symbol = sanitizeText(entry.symbol || entry.name);
   if (!symbol) return null;
   const stiffness = {};
-  for (const field of ['kr', 'krY', 'krZ', 'kt']) {
+  for (const field of ['kr', 'krY', 'krZ', 'kt', 'kv']) {
     if (!isValidOptionalSpringStiffness(entry[field])) {
       throw new Error(`Invalid spring stiffness ${field}: ${symbol}`);
     }
@@ -191,6 +202,32 @@ export function normalizeSpringEntry(entry) {
     ...stiffness,
     memo: sanitizeText(entry.memo) || '',
   };
+}
+
+// These are catalog symbol references, never stiffness numbers or implicit
+// fallbacks. Preserve unknown symbols so editing/loading cannot silently
+// substitute a different connection; analysis preflight checks resolution.
+function normalizeSpringReference(value, label) {
+  if (value === null || value === undefined) return null;
+  if (typeof value !== 'string') throw new Error(`Invalid spring reference ${label}`);
+  return value.trim() || null;
+}
+
+function normalizeEdgeSprings(value, name) {
+  if (value !== null && value !== undefined &&
+      (typeof value !== 'object' || Array.isArray(value) ||
+       Object.keys(value).some(key => !['panelToPanel', 'panelToBeam'].includes(key)))) {
+    throw new Error(`Invalid surface edge springs: ${name}`);
+  }
+  return {
+    panelToPanel: normalizeSpringReference(value?.panelToPanel, `edgeSprings.panelToPanel: ${name}`),
+    panelToBeam: normalizeSpringReference(value?.panelToBeam, `edgeSprings.panelToBeam: ${name}`),
+  };
+}
+
+export function surfaceSpringSymbols(section) {
+  return [section?.endRotationalSpring, section?.edgeSprings?.panelToPanel, section?.edgeSprings?.panelToBeam]
+    .filter(symbol => typeof symbol === 'string' && symbol.length > 0);
 }
 
 export function normalizeMaterialEntry(entry) {
@@ -328,6 +365,10 @@ export function isSameSectionDefinition(a, b) {
     (a.target !== 'surface' || (
       optionalPositiveNumber(a.thickness) === optionalPositiveNumber(b.thickness) &&
       (sanitizeText(a.selfWeightMode) || null) === (sanitizeText(b.selfWeightMode) || null) &&
+      (sanitizeText(a.panelDirection) || null) === (sanitizeText(b.panelDirection) || null) &&
+      (sanitizeText(a.endRotationalSpring) || null) === (sanitizeText(b.endRotationalSpring) || null) &&
+      ['panelToPanel', 'panelToBeam'].every(key =>
+        (sanitizeText(a.edgeSprings?.[key]) || null) === (sanitizeText(b.edgeSprings?.[key]) || null)) &&
       (isBlank(a.additionalWeight) ? null : Number(a.additionalWeight)) ===
         (isBlank(b.additionalWeight) ? null : Number(b.additionalWeight))
     ));
@@ -335,7 +376,7 @@ export function isSameSectionDefinition(a, b) {
 
 export function isSameSpringDefinition(a, b) {
   return a.symbol === b.symbol &&
-    ['kr', 'krY', 'krZ', 'kt'].every(field =>
+    ['kr', 'krY', 'krZ', 'kt', 'kv'].every(field =>
       normalizeSpringStiffness(a[field]) === normalizeSpringStiffness(b[field])) &&
     (a.memo || '') === (b.memo || '');
 }
@@ -419,6 +460,7 @@ export function cloneSection(section) {
     ...section,
     defaultEndI: section.defaultEndI ? { ...section.defaultEndI } : undefined,
     defaultEndJ: section.defaultEndJ ? { ...section.defaultEndJ } : undefined,
+    ...(section.edgeSprings ? { edgeSprings: { ...section.edgeSprings } } : {}),
   };
 }
 

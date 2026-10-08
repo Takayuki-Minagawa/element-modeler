@@ -18,6 +18,7 @@ import {
   normalizeSectionType,
   normalizeSpringEntry,
   sanitizeColor,
+  surfaceSpringSymbols,
 } from '../section-catalog.js';
 
 function refreshSurfaceWeightsForMaterial(state, materialName) {
@@ -119,9 +120,13 @@ export const catalogState = {
     } else {
       let normalized;
       try {
-        normalized = normalizeCatalogSectionEntry({
+        const candidate = {
           ...section, ...props, target: 'surface', type: normalizedType, name: section.name,
-        });
+        };
+        if (props.edgeSprings && typeof props.edgeSprings === 'object' && !Array.isArray(props.edgeSprings)) {
+          candidate.edgeSprings = { ...section.edgeSprings, ...props.edgeSprings };
+        }
+        normalized = normalizeCatalogSectionEntry(candidate);
       } catch {
         return null;
       }
@@ -228,10 +233,10 @@ export const catalogState = {
     );
     if (inUse) return false;
     const inSectionPreset = this.sectionCatalog.some(s =>
-      s.target === 'member' && (
+      (s.target === 'surface' && surfaceSpringSymbols(s).includes(symbol)) || (s.target === 'member' && (
         (s.defaultEndI?.condition === 'spring' && s.defaultEndI.springSymbol === symbol) ||
         (s.defaultEndJ?.condition === 'spring' && s.defaultEndJ.springSymbol === symbol)
-      )
+      ))
     );
     if (inSectionPreset) return false;
     this.springCatalog.splice(idx, 1);
