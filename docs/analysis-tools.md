@@ -120,6 +120,10 @@ workbenchの`distributedAnalysisModel()`は選択した元荷重を**置換**し
 
 密度・massSourcesは今回の静的計算に使用しません。既存プリフライトは別の品質ゲートです。
 たとえば未定義の質量係数はブラウザ出力を止める場合がありますが、外部静的CLIでは使用しません。
+`Ay` / `Az` / `Avy` / `Avz` が指定されている場合は正値・mm²の単位を検査し、
+Euler–Bernoulli要素ではせん断面積とせん断変形を使わないことをCLIと結果JSONに警告します。
+`designation` / `declaredPropertySource` は交換用メタデータであり、数値物性の再計算には使いません。
+方向別ばね `krY` / `krZ` の追加後も、`condition: spring` は対応範囲外として停止します。
 別ケースの面/線荷重は解析しません。全荷重のloadCase参照は検査します。
 要素には断面回転や偏心を表す`rotation/sectionRotation/offsetI/offsetJ/localAxis`を追加できません。
 

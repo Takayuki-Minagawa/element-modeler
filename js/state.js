@@ -1008,7 +1008,7 @@ export class AppState {
       }
       stripSurfaceFieldsForType(surface, surface.type);
     }
-    if (hasType || hasSectionName || hasColor) {
+    if (hasType || hasSectionName || hasColor || hasOwn(props, 'unitWeight')) {
       this._ensureSurfaceSection(surface, surface.sectionName);
     }
     this._touch();

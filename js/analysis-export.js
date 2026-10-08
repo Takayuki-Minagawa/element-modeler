@@ -11,6 +11,7 @@ import { APP_VERSION, LOAD_CASES } from './constants.js';
 import {
   normalizeSectionShape,
   normalizeSectionType,
+  normalizeSpringStiffness,
   optionalRatio,
   sectionProperties,
 } from './section-catalog.js';
@@ -176,6 +177,8 @@ export function buildAnalysisModel(state, options = {}) {
       const properties = sectionProperties(section);
       const shearAreaRatioY = optionalRatio(section.shearAreaRatioY);
       const shearAreaRatioZ = optionalRatio(section.shearAreaRatioZ);
+      const Avy = finitePositiveOrNull(section.Avy);
+      const Avz = finitePositiveOrNull(section.Avz);
       return {
         id: index + 1,
         name: section.name,
@@ -188,10 +191,16 @@ export function buildAnalysisModel(state, options = {}) {
         webThickness: section.webThickness ?? null,
         boxThickness: section.boxThickness ?? null,
         ...properties,
+        designation: section.designation || null,
+        // Keep the v2 per-property calculation provenance above. The CAD
+        // catalog's declared origin is independent and may be unspecified.
+        declaredPropertySource: section.propertySource ?? null,
+        Avy,
+        Avz,
         shearAreaRatioY,
         shearAreaRatioZ,
-        Ay: shearAreaRatioY === null ? null : properties.A * shearAreaRatioY,
-        Az: shearAreaRatioZ === null ? null : properties.A * shearAreaRatioZ,
+        Ay: Avy ?? (shearAreaRatioY === null ? null : properties.A * shearAreaRatioY),
+        Az: Avz ?? (shearAreaRatioZ === null ? null : properties.A * shearAreaRatioZ),
         isDefault: !!section.isDefault,
       };
     });
@@ -231,15 +240,17 @@ export function buildAnalysisModel(state, options = {}) {
     .filter(s => usedSpringSymbols.has(s.symbol))
     .map(s => ({
       symbol: s.symbol,
-      kr: finitePositiveOrNull(s.kr),
-      kt: finitePositiveOrNull(s.kt),
+      kr: normalizeSpringStiffness(s.kr),
+      krY: normalizeSpringStiffness(s.krY),
+      krZ: normalizeSpringStiffness(s.krZ),
+      kt: normalizeSpringStiffness(s.kt),
       memo: s.memo || '',
       isDefault: !!s.isDefault,
     }));
 
   const analysisSettings = normalizeAnalysisSettings(state.analysisSettings);
   const undefinedSpringSymbols = springs
-    .filter(spring => spring.kr === null)
+    .filter(spring => (spring.krY ?? spring.kr) === null || (spring.krZ ?? spring.kr) === null)
     .map(spring => spring.symbol);
   const undefinedMassSourceCases = LOAD_CASES.filter(
     loadCase => analysisSettings.massSources[loadCase] === null
@@ -325,7 +336,7 @@ function loadUnitText(type) {
   return 'N;N*mm';
 }
 
-const CSV_COLUMNS = 24;
+const CSV_COLUMNS = 28;
 
 // Flat CSV rendering of the analysis model (one `section` marker column, same
 // convention as the quantity CSVs). Values use the same mm-N base system as
@@ -378,23 +389,27 @@ export function buildAnalysisCSV(state, options = {}) {
   push('sect_header', 'name', 'type', 'material', 'b_mm', 'h_mm', 'A_mm2', 'Iy_mm4', 'Iz_mm4', 'J_mm4', 'is_default',
     'A_source', 'Iy_source', 'Iz_source', 'J_source', 'section_id',
     'shape', 'flange_thickness_mm', 'web_thickness_mm', 'box_thickness_mm',
-    'shear_area_ratio_y', 'shear_area_ratio_z', 'Ay_mm2', 'Az_mm2');
+    'shear_area_ratio_y', 'shear_area_ratio_z', 'Ay_mm2', 'Az_mm2',
+    'designation', 'declared_property_source', 'Avy_mm2', 'Avz_mm2');
   for (const s of model.sections) {
     push('sect', s.name, s.type, s.material, String(s.b ?? ''), String(s.h ?? ''),
       String(s.A), String(s.Iy), String(s.Iz), String(s.J), s.isDefault ? '1' : '0',
       s.propertySource.A, s.propertySource.Iy, s.propertySource.Iz, s.propertySource.J,
       s.id, s.shape, String(s.flangeThickness ?? ''), String(s.webThickness ?? ''),
       String(s.boxThickness ?? ''), String(s.shearAreaRatioY ?? ''), String(s.shearAreaRatioZ ?? ''),
-      String(s.Ay ?? ''), String(s.Az ?? ''));
+      String(s.Ay ?? ''), String(s.Az ?? ''), s.designation, s.declaredPropertySource,
+      String(s.Avy ?? ''), String(s.Avz ?? ''));
   }
   push('material_header', 'name', 'E_N_mm2', 'G_N_mm2', 'density_kg_m3', 'is_default');
   for (const material of model.materials) {
     push('material', material.name, String(material.E ?? ''), String(material.G ?? ''),
       String(material.density ?? ''), material.isDefault ? '1' : '0');
   }
-  push('spring_header', 'symbol', 'memo', 'kr_N_mm_rad', 'kt_N_mm', 'is_default');
+  push('spring_header', 'symbol', 'memo', 'kr_N_mm_rad', 'kt_N_mm', 'is_default',
+    'krY_N_mm_rad', 'krZ_N_mm_rad');
   for (const s of model.springs) {
-    push('spring', s.symbol, s.memo, String(s.kr ?? ''), String(s.kt ?? ''), s.isDefault ? '1' : '0');
+    push('spring', s.symbol, s.memo, String(s.kr ?? ''), String(s.kt ?? ''), s.isDefault ? '1' : '0',
+      String(s.krY ?? ''), String(s.krZ ?? ''));
   }
   push('support_header', 'id', 'node', 'dx', 'dy', 'dz', 'rx', 'ry', 'rz', 'source_id');
   for (const s of model.supports) {

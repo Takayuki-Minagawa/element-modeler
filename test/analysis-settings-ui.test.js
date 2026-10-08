@@ -43,10 +43,19 @@ test('user definition UI exposes material, section-property, and spring-stiffnes
     'user-def-Iy',
     'user-def-Iz',
     'user-def-J',
+    'user-def-Avy',
+    'user-def-Avz',
+    'user-def-designation',
+    'user-def-property-source',
+    'user-def-thickness',
+    'user-def-self-weight-mode',
+    'user-def-additional-weight',
     'btn-user-def-calculate-properties',
     'user-def-shear-area-ratio-y',
     'user-def-shear-area-ratio-z',
     'user-def-kr',
+    'user-def-krY',
+    'user-def-krZ',
     'user-def-kt',
     'user-def-material-name',
     'user-def-E',
@@ -57,7 +66,8 @@ test('user definition UI exposes material, section-property, and spring-stiffnes
   }
   assert.match(source, /commands\.addMaterial/);
   assert.match(source, /commands\.updateMaterial/);
-  assert.match(source, /commands\.updateSpring\(symbol, \{ kr:/);
+  assert.match(source, /commands\.updateSpring\(symbol, \{ \.\.\.stiffness, memo \}\)/);
+  assert.match(source, /readSpringStiffnessInput/);
   assert.match(source, /patch\[property\] = result\.value/);
   assert.match(source, /calculateSectionPropertiesFromShape/);
   assert.match(source, /Math\.round\(value\)/);

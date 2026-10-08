@@ -6,10 +6,10 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
-  <title>Element Modeler - Ver.1.6.3</title>
+  <title>Element Modeler - Ver.1.7.0</title>
   <link rel="help" href="docs/coordinate-input.md" type="text/markdown">
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
-  <link rel="stylesheet" href="style.css?v=1.6.3">
+  <link rel="stylesheet" href="style.css?v=1.7.0">
 </head>
 <body>
 <header id="app-header">
@@ -282,7 +282,7 @@
       <span id="status-zoom">Zoom: 100%</span>
       <span id="status-tool" data-i18n="toolMember">ツール: 線材</span>
       <div id="recovery-tools"></div>
-      <span id="status-version">Ver.1.6.3</span>
+      <span id="status-version">Ver.1.7.0</span>
     </footer>
   </main>
   <div id="property-resizer" class="side-resizer side-resizer-right" role="separator" aria-label="Resize properties" aria-orientation="vertical">
@@ -655,32 +655,74 @@
             <input id="user-def-box-thickness" type="number" min="0.001" step="any" placeholder="9">
           </div>
           <div id="user-def-section-material-group" class="settings-group">
-            <label data-i18n="userDefMaterialName">材料</label>
+            <label for="user-def-section-material" data-i18n="userDefMaterialName">材料</label>
             <select id="user-def-section-material"></select>
           </div>
           <div id="user-def-properties-group">
-            <p class="quantity-note" data-i18n="userDefSectionPropertyHint">空欄は選択した形状から算定します。計算結果は整数で入力されます。</p>
+            <div class="settings-group">
+              <label for="user-def-designation" data-i18n="userDefDesignation">鋼材記号</label>
+              <input id="user-def-designation" type="text" placeholder="H-200x100x3.2x4.5">
+            </div>
+            <div class="settings-group">
+              <label for="user-def-property-source" data-i18n="userDefPropertySource">断面値の由来</label>
+              <select id="user-def-property-source">
+                <option value="" data-i18n="userDefUnspecified">未入力</option>
+                <option value="catalog" data-i18n="userDefSourceCatalog">カタログ値</option>
+                <option value="computed" data-i18n="userDefSourceComputed">寸法から計算</option>
+                <option value="manual" data-i18n="userDefSourceManual">手入力</option>
+              </select>
+            </div>
+            <p class="quantity-note" data-i18n="userDefSectionPropertyHint">空欄は未入力として保存し、解析時は寸法から算定します。計算ボタンで値を入力し、由来を「寸法から計算」に設定します。</p>
             <div class="prop-row">
               <div class="settings-group settings-group-grow">
                 <label data-i18n="userDefAreaA">A (mm²)</label>
-                <input id="user-def-A" type="number" min="0" step="any" placeholder="auto">
+                <input id="user-def-A" type="number" min="0" step="any" placeholder="-">
               </div>
               <div class="settings-group settings-group-grow">
                 <label data-i18n="userDefIy">Iy (mm⁴)</label>
-                <input id="user-def-Iy" type="number" min="0" step="any" placeholder="auto">
+                <input id="user-def-Iy" type="number" min="0" step="any" placeholder="-">
               </div>
             </div>
             <div class="prop-row">
               <div class="settings-group settings-group-grow">
                 <label data-i18n="userDefIz">Iz (mm⁴)</label>
-                <input id="user-def-Iz" type="number" min="0" step="any" placeholder="auto">
+                <input id="user-def-Iz" type="number" min="0" step="any" placeholder="-">
               </div>
               <div class="settings-group settings-group-grow">
                 <label data-i18n="userDefJ">J (mm⁴)</label>
-                <input id="user-def-J" type="number" min="0" step="any" placeholder="auto">
+                <input id="user-def-J" type="number" min="0" step="any" placeholder="-">
               </div>
             </div>
             <button type="button" id="btn-user-def-calculate-properties" class="support-preset-btn" data-i18n="userDefCalculateProperties">形状から性能を計算</button>
+            <div class="prop-row">
+              <div class="settings-group settings-group-grow">
+                <label for="user-def-Avy" data-i18n="userDefAvy">せん断面積 Avy (mm²)</label>
+                <input id="user-def-Avy" type="number" min="0" step="any">
+              </div>
+              <div class="settings-group settings-group-grow">
+                <label for="user-def-Avz" data-i18n="userDefAvz">せん断面積 Avz (mm²)</label>
+                <input id="user-def-Avz" type="number" min="0" step="any">
+              </div>
+            </div>
+          </div>
+          <div id="user-def-surface-weight-group" hidden>
+            <div class="settings-group">
+              <label for="user-def-thickness" data-i18n="userDefSurfaceThickness">面材板厚 (mm)</label>
+              <input id="user-def-thickness" type="number" min="0" step="any">
+            </div>
+            <div class="settings-group">
+              <label for="user-def-self-weight-mode" data-i18n="userDefSelfWeightMode">自重の設定</label>
+              <select id="user-def-self-weight-mode">
+                <option value="" data-i18n="userDefUnspecified">未入力</option>
+                <option value="manual" data-i18n="userDefWeightManual">合計重量を手入力</option>
+                <option value="fromDensity" data-i18n="userDefWeightFromDensity">密度と板厚から計算</option>
+              </select>
+            </div>
+            <div class="settings-group">
+              <label for="user-def-additional-weight" data-i18n="userDefAdditionalWeight">付加重量 (N/m²)</label>
+              <input id="user-def-additional-weight" type="number" min="0" step="any">
+            </div>
+            <p id="user-def-surface-weight-preview" class="quantity-note" aria-live="polite"></p>
           </div>
           <div id="user-def-shear-area-ratio-group">
             <p class="quantity-note" data-i18n="userDefShearAreaRatioHint">せん断用断面積の比率を 0 より大きく 1 以下の小数で入力します。空欄は未定義です。</p>
@@ -728,14 +770,25 @@
           </div>
           <div class="prop-row">
             <div class="settings-group settings-group-grow">
-              <label data-i18n="userDefKr">回転剛性 kr (N·mm/rad)</label>
-              <input id="user-def-kr" type="number" min="0" step="any" placeholder="未定義">
+              <label for="user-def-kr" data-i18n="userDefKr">共通曲げ kr (N·mm/rad)</label>
+              <input id="user-def-kr" type="text" placeholder="1.0e9 / pin / rigid" aria-describedby="user-def-stiffness-hint">
             </div>
             <div class="settings-group settings-group-grow">
-              <label data-i18n="userDefKt">並進剛性 kt (N/mm)</label>
-              <input id="user-def-kt" type="number" min="0" step="any" placeholder="任意">
+              <label for="user-def-kt" data-i18n="userDefKt">並進剛性 kt (N/mm)</label>
+              <input id="user-def-kt" type="text" placeholder="1.0e9 / pin / rigid" aria-describedby="user-def-stiffness-hint">
             </div>
           </div>
+          <div class="prop-row">
+            <div class="settings-group settings-group-grow">
+              <label for="user-def-krY" data-i18n="userDefKrY">Y軸回り曲げ krY (N·mm/rad)</label>
+              <input id="user-def-krY" type="text" placeholder="1.0e9 / pin / rigid" aria-describedby="user-def-stiffness-hint">
+            </div>
+            <div class="settings-group settings-group-grow">
+              <label for="user-def-krZ" data-i18n="userDefKrZ">Z軸回り曲げ krZ (N·mm/rad)</label>
+              <input id="user-def-krZ" type="text" placeholder="1.0e9 / pin / rigid" aria-describedby="user-def-stiffness-hint">
+            </div>
+          </div>
+          <p id="user-def-stiffness-hint" class="quantity-note" data-i18n="userDefStiffnessHint">正の数値、pin（ピン）、rigid（剛）を入力。空欄は未入力。方向別は部材ローカル軸回りの曲げで、空欄の場合は共通 kr を使います。</p>
           <div class="settings-group">
             <label data-i18n="userDefMemo">メモ</label>
             <input id="user-def-memo" type="text" placeholder="">
@@ -903,6 +956,6 @@
     }
   }
   </script>
-  <script type="module" src="js/app.js?v=1.6.3"></script>
+  <script type="module" src="js/app.js?v=1.7.0"></script>
 </body>
 </html>

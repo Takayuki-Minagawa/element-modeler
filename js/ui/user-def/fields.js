@@ -2,6 +2,7 @@
 import { t } from '../../i18n.js';
 import { escapeHtml } from '../../dom-utils.js';
 import { calculateSectionPropertiesFromShape, normalizeSectionShape } from '../../section-catalog.js';
+import { calculateSurfaceUnitWeight } from '../../surface-weight.js';
 
 export const END_CONDITIONS = ['pin', 'rigid', 'spring'];
 
@@ -64,12 +65,50 @@ export function readRowEndPreset(row, fieldPrefix) {
 }
 
 export function readOptionalPositiveInput(input) {
+  if (input?.validity?.badInput) return { valid: false, value: null };
   const raw = input?.value?.trim() || '';
   if (raw === '') return { valid: true, value: null };
   const value = Number(raw);
   return Number.isFinite(value) && value > 0
     ? { valid: true, value }
     : { valid: false, value: null };
+}
+
+export function readOptionalNonNegativeInput(input) {
+  if (input?.validity?.badInput) return { valid: false, value: null };
+  const raw = input?.value?.trim() || '';
+  if (raw === '') return { valid: true, value: null };
+  const value = Number(raw);
+  return Number.isFinite(value) && value >= 0
+    ? { valid: true, value }
+    : { valid: false, value: null };
+}
+
+export function readSpringStiffnessInput(input) {
+  const raw = input?.value?.trim() || '';
+  if (raw === 'pin' || raw === 'rigid') return { valid: true, value: raw };
+  return readOptionalPositiveInput(input);
+}
+
+export function renderPropertySourceOptions(selected = '') {
+  return [['', 'userDefUnspecified'], ['catalog', 'userDefSourceCatalog'], ['computed', 'userDefSourceComputed'], ['manual', 'userDefSourceManual']]
+    .map(([value, key]) => `<option value="${value}" ${value === (selected || '') ? 'selected' : ''}>${escapeHtml(t(key))}</option>`).join('');
+}
+
+export function renderSelfWeightModeOptions(selected = '') {
+  return [['', 'userDefUnspecified'], ['manual', 'userDefWeightManual'], ['fromDensity', 'userDefWeightFromDensity']]
+    .map(([value, key]) => `<option value="${value}" ${value === (selected || '') ? 'selected' : ''}>${escapeHtml(t(key))}</option>`).join('');
+}
+
+export function surfaceWeightFeedback(section, material) {
+  if (section?.selfWeightMode !== 'fromDensity') return t('userDefSurfaceWeightManualHint');
+  const total = calculateSurfaceUnitWeight(section, material);
+  if (total !== null) return t('userDefSurfaceWeightCalculated', { value: Number(total.toFixed(4)) });
+  const missing = [];
+  if (!Number.isFinite(material?.density) || material.density <= 0) missing.push(t('userDefMaterialDensity'));
+  if (!Number.isFinite(section.thickness) || section.thickness <= 0) missing.push(t('userDefSurfaceThickness'));
+  if (!Number.isFinite(section.additionalWeight) || section.additionalWeight < 0) missing.push(t('userDefAdditionalWeight'));
+  return t('userDefSurfaceWeightIncomplete', { fields: missing.join(', ') });
 }
 
 export function readRequiredPositiveInput(input) {
@@ -80,6 +119,7 @@ export function readRequiredPositiveInput(input) {
 }
 
 export function readOptionalRatioInput(input) {
+  if (input?.validity?.badInput) return { valid: false, value: null };
   const raw = input?.value?.trim() || '';
   if (raw === '') return { valid: true, value: null };
   const value = Number(raw);

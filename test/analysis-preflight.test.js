@@ -153,3 +153,25 @@ test('supports disconnected from every member are reported as warnings', () => {
   assert.ok(report.issues.some(issue => issue.code === 'orphan-supports'));
   assert.equal(report.summary.warnings, 1);
 });
+
+test('directional spring preflight requires both resolved bending directions', () => {
+  const state = new AppState();
+  state.addSpring({ symbol: 'DIRECTIONAL', krY: 1e9, krZ: 'pin' });
+  const member = addPlanBeam(state, 0, 0, 4000, 0);
+  member.endI = { condition: 'spring', springSymbol: 'DIRECTIONAL' };
+  addSupport(state, 0, 0, {
+    dx: true, dy: true, dz: true, rx: true, ry: true, rz: true,
+  });
+  assert.equal(buildAnalysisPreflight(state).canExport, true);
+
+  state.updateSpring('DIRECTIONAL', { krZ: null });
+  let report = buildAnalysisPreflight(state);
+  assert.equal(report.canExport, false);
+  const issue = report.issues.find(item => item.code === 'undefined-springs');
+  assert.equal(issue.params.values, 'DIRECTIONAL');
+  assert.deepEqual(issue.targets, [{ elementType: 'member', elementId: member.id }]);
+
+  state.updateSpring('DIRECTIONAL', { kr: 'rigid' });
+  report = buildAnalysisPreflight(state);
+  assert.equal(report.canExport, true);
+});

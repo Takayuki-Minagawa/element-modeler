@@ -3,7 +3,7 @@ import { t } from '../../i18n.js';
 import { markInputInvalid, clearInputInvalid } from '../../dom-utils.js';
 import { showNotice } from '../../notice.js';
 import { calculateSectionPropertiesFromShape } from '../../section-catalog.js';
-import { applyI18nTo, syncEndSpringVisibility, readRowEndPreset, readOptionalPositiveInput, readRequiredPositiveInput, readOptionalRatioInput, readSectionShapeInputs, calculatedIntegerProperties, applyCalculatedProperties } from './fields.js';
+import { applyI18nTo, syncEndSpringVisibility, readRowEndPreset, readOptionalPositiveInput, readOptionalNonNegativeInput, readSpringStiffnessInput, readRequiredPositiveInput, readOptionalRatioInput, readSectionShapeInputs, calculatedIntegerProperties, applyCalculatedProperties, surfaceWeightFeedback } from './fields.js';
 
 import { renderCatalogTable } from './table.js';
 
@@ -64,7 +64,9 @@ export function createUserDefList({ state, commands, getGroup, onModelChange, re
       }
       Object.assign(patch, shape.value);
       patch.material = row.querySelector('[data-field="material"]')?.value || 'steel';
-      for (const property of ['A', 'Iy', 'Iz', 'J']) {
+      patch.designation = row.querySelector('[data-field="designation"]')?.value?.trim() || null;
+      patch.propertySource = row.querySelector('[data-field="propertySource"]')?.value || null;
+      for (const property of ['A', 'Iy', 'Iz', 'J', 'Avy', 'Avz']) {
         const input = row.querySelector(`[data-field="${property}"]`);
         const result = readOptionalPositiveInput(input);
         if (!result.valid) {
@@ -86,6 +88,19 @@ export function createUserDefList({ state, commands, getGroup, onModelChange, re
       }
       patch.defaultEndI = readRowEndPreset(row, 'defaultEndI');
       patch.defaultEndJ = readRowEndPreset(row, 'defaultEndJ');
+    } else {
+      patch.material = row.querySelector('[data-field="material"]')?.value || null;
+      patch.selfWeightMode = row.querySelector('[data-field="selfWeightMode"]')?.value || null;
+      for (const field of ['thickness', 'additionalWeight']) {
+        const input = row.querySelector(`[data-field="${field}"]`);
+        const result = field === 'thickness' ? readOptionalPositiveInput(input) : readOptionalNonNegativeInput(input);
+        if (!result.valid) {
+          markInputInvalid(input);
+          showNotice(t('userDefInvalidSurfaceWeight'), 'error');
+          return;
+        }
+        patch[field] = result.value;
+      }
     }
 
     const updated = commands.updateSection(target, type, name, patch);
@@ -131,6 +146,8 @@ export function createUserDefList({ state, commands, getGroup, onModelChange, re
       Iz: row.querySelector('[data-field="Iz"]'),
       J: row.querySelector('[data-field="J"]'),
     });
+    const source = row.querySelector('[data-field="propertySource"]');
+    if (source) source.value = 'computed';
   }
 
   function saveSpringRow(btn) {
@@ -138,16 +155,19 @@ export function createUserDefList({ state, commands, getGroup, onModelChange, re
     const row = btn.closest('tr');
     if (!row) return;
     const memo = row.querySelector('[data-field="memo"]')?.value || '';
-    const krInput = row.querySelector('[data-field="kr"]');
-    const ktInput = row.querySelector('[data-field="kt"]');
-    const kr = readOptionalPositiveInput(krInput);
-    const kt = readOptionalPositiveInput(ktInput);
-    if (!kr.valid || !kt.valid) {
-      markInputInvalid(!kr.valid ? krInput : ktInput);
-      showNotice(t('userDefInvalidStiffness'), 'error');
-      return;
+    const stiffness = {};
+    for (const field of ['kr', 'krY', 'krZ', 'kt']) {
+      const input = row.querySelector(`[data-field="${field}"]`);
+      clearInputInvalid(input);
+      const result = readSpringStiffnessInput(input);
+      if (!result.valid) {
+        markInputInvalid(input);
+        showNotice(t('userDefInvalidStiffness'), 'error');
+        return;
+      }
+      stiffness[field] = result.value;
     }
-    const updated = commands.updateSpring(symbol, { kr: kr.value, kt: kt.value, memo });
+    const updated = commands.updateSpring(symbol, { ...stiffness, memo });
     if (updated === undefined) return;
     if (!updated) {
       showNotice(t('userDefUpdateFailed'), 'error');
@@ -247,9 +267,24 @@ export function createUserDefList({ state, commands, getGroup, onModelChange, re
     userDefListModal.classList.remove('visible');
   }
 
-  // Event delegation for the list modal: one change listener keeps end-spring
-  // selects in sync, one click listener dispatches on data-action.
+  function refreshSurfaceRowPreview(event) {
+    const field = event.target.dataset?.field;
+    if (['material', 'thickness', 'selfWeightMode', 'additionalWeight'].includes(field)) {
+      const row = event.target.closest('tr');
+      const preview = row?.querySelector('[data-field="weightPreview"]');
+      if (preview) preview.textContent = surfaceWeightFeedback({
+        selfWeightMode: row.querySelector('[data-field="selfWeightMode"]')?.value || null,
+        thickness: readOptionalPositiveInput(row.querySelector('[data-field="thickness"]')).value,
+        additionalWeight: readOptionalNonNegativeInput(row.querySelector('[data-field="additionalWeight"]')).value,
+      }, state.getMaterial(row.querySelector('[data-field="material"]')?.value));
+    }
+  }
+
+  // Update previews while typing. Updating their height only on blur can move
+  // the centered dialog between pointer-down and pointer-up on the Save button.
+  userDefListBody?.addEventListener('input', refreshSurfaceRowPreview);
   userDefListBody?.addEventListener('change', (event) => {
+    refreshSurfaceRowPreview(event);
     const conditionEl = event.target.closest('[data-field$="Condition"]');
     if (!conditionEl) return;
     const springField = conditionEl.dataset.field.replace('Condition', 'Spring');

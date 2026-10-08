@@ -2,7 +2,7 @@
 import { t } from '../../i18n.js';
 import { escapeHtml } from '../../dom-utils.js';
 import { normalizeSectionShape } from '../../section-catalog.js';
-import { renderEndPresetCell } from './fields.js';
+import { renderEndPresetCell, renderPropertySourceOptions, renderSelfWeightModeOptions, surfaceWeightFeedback } from './fields.js';
 
 const BUILT_IN_MATERIAL_NAMES = new Set(['steel', 'rc', 'wood']);
 
@@ -50,7 +50,23 @@ export function renderCatalogTable({ group, items, materials = [], springs = [] 
   function renderOptionalNumberCell(item, field, editable = !item.isDefault) {
     const value = item[field];
     if (!editable) return Number.isFinite(value) ? String(value) : '-';
-    return `<input type="number" class="user-def-table-input" data-field="${field}" min="0" step="any" value="${Number.isFinite(value) ? value : ''}" placeholder="auto">`;
+    return `<input type="number" class="user-def-table-input" data-field="${field}" min="0" step="any" value="${Number.isFinite(value) ? value : ''}" placeholder="-">`;
+  }
+
+  function renderStiffnessCell(item, field) {
+    const value = item[field] ?? '';
+    if (item.isDefault) return escapeHtml(value === '' ? '-' : value);
+    return `<input type="text" class="user-def-table-input" data-field="${field}" value="${escapeHtml(value)}" placeholder="1.0e9 / pin / rigid">`;
+  }
+
+  function renderPropertySourceCell(item) {
+    if (item.isDefault) return escapeHtml(item.propertySource ? t({ catalog: 'userDefSourceCatalog', computed: 'userDefSourceComputed', manual: 'userDefSourceManual' }[item.propertySource]) : '-');
+    return `<select class="user-def-table-input" data-field="propertySource">${renderPropertySourceOptions(item.propertySource)}</select>`;
+  }
+
+  function renderSelfWeightModeCell(item) {
+    if (item.isDefault) return escapeHtml(item.selfWeightMode ? t(item.selfWeightMode === 'fromDensity' ? 'userDefWeightFromDensity' : 'userDefWeightManual') : '-');
+    return `<select class="user-def-table-input" data-field="selfWeightMode">${renderSelfWeightModeOptions(item.selfWeightMode)}</select>`;
   }
 
   function renderShapeOptions(selectedShape) {
@@ -86,9 +102,11 @@ export function renderCatalogTable({ group, items, materials = [], springs = [] 
   }
 
   function renderMaterialSelectCell(section) {
-    if (section.isDefault) return escapeHtml(section.material || 'steel');
+    if (section.isDefault) return escapeHtml(section.material || (section.target === 'surface' ? '-' : 'steel'));
 
     return `<select class="user-def-table-input" data-field="material">
+      ${section.target === 'surface' ? `<option value="" ${!section.material ? 'selected' : ''}>${escapeHtml(t('userDefUnspecified'))}</option>` : ''}
+      ${section.material && !materials.some(material => material.name === section.material) ? `<option value="${escapeHtml(section.material)}" selected>${escapeHtml(section.material)} (${escapeHtml(t('userDefMaterialMissing'))})</option>` : ''}
       ${materials.map(material => `<option value="${escapeHtml(material.name)}" ${material.name === section.material ? 'selected' : ''}>${escapeHtml(material.name)}</option>`).join('')}
     </select>`;
   }
@@ -102,8 +120,10 @@ export function renderCatalogTable({ group, items, materials = [], springs = [] 
   function buildSpringColumns() {
     return [
       { header: t('userDefListColName'), cell: s => escapeHtml(s.symbol) },
-      { header: t('userDefListColKr'), cell: s => renderOptionalNumberCell(s, 'kr') },
-      { header: t('userDefListColKt'), cell: s => renderOptionalNumberCell(s, 'kt') },
+      { header: t('userDefKr'), cell: s => renderStiffnessCell(s, 'kr') },
+      { header: t('userDefKrY'), cell: s => renderStiffnessCell(s, 'krY') },
+      { header: t('userDefKrZ'), cell: s => renderStiffnessCell(s, 'krZ') },
+      { header: t('userDefKt'), cell: s => renderStiffnessCell(s, 'kt') },
       { header: t('userDefListColMemo'), cell: renderMemoCell },
       { header: t('userDefListColDefault'), cell: renderDefaultFlagCell },
       {
@@ -131,14 +151,26 @@ export function renderCatalogTable({ group, items, materials = [], springs = [] 
         { header: t('userDefListColWebThickness'), cell: s => renderOptionalNumberCell(s, 'webThickness') },
         { header: t('userDefListColBoxThickness'), cell: s => renderOptionalNumberCell(s, 'boxThickness') },
         { header: t('userDefListColMaterial'), cell: renderMaterialSelectCell },
+        { header: t('userDefDesignation'), cell: s => s.isDefault ? escapeHtml(s.designation || '-') : `<input type="text" class="user-def-table-input" data-field="designation" value="${escapeHtml(s.designation || '')}">` },
+        { header: t('userDefPropertySource'), cell: renderPropertySourceCell },
         { header: 'A', cell: s => renderOptionalNumberCell(s, 'A') },
         { header: 'Iy', cell: s => renderOptionalNumberCell(s, 'Iy') },
         { header: 'Iz', cell: s => renderOptionalNumberCell(s, 'Iz') },
         { header: 'J', cell: s => renderOptionalNumberCell(s, 'J') },
+        { header: t('userDefAvy'), cell: s => renderOptionalNumberCell(s, 'Avy') },
+        { header: t('userDefAvz'), cell: s => renderOptionalNumberCell(s, 'Avz') },
         { header: t('userDefListColShearAreaRatioY'), cell: s => renderOptionalRatioCell(s, 'shearAreaRatioY') },
         { header: t('userDefListColShearAreaRatioZ'), cell: s => renderOptionalRatioCell(s, 'shearAreaRatioZ') },
         { header: t('userDefListColEndI'), cell: s => renderEndPresetCell(s.defaultEndI, 'defaultEndI', !s.isDefault, springDefs) },
         { header: t('userDefListColEndJ'), cell: s => renderEndPresetCell(s.defaultEndJ, 'defaultEndJ', !s.isDefault, springDefs) },
+      );
+    } else {
+      columns.push(
+        { header: t('userDefListColMaterial'), cell: renderMaterialSelectCell },
+        { header: t('userDefSurfaceThickness'), cell: s => renderOptionalNumberCell(s, 'thickness') },
+        { header: t('userDefSelfWeightMode'), cell: renderSelfWeightModeCell },
+        { header: t('userDefAdditionalWeight'), cell: s => renderOptionalNumberCell(s, 'additionalWeight') },
+        { header: `${t('unitWeight')} (N/m²)`, cell: s => `<span data-field="weightPreview" aria-live="polite">${escapeHtml(surfaceWeightFeedback(s, materials.find(material => material.name === s.material)))}</span>` },
       );
     }
     columns.push(
@@ -188,7 +220,7 @@ export function renderCatalogTable({ group, items, materials = [], springs = [] 
         <tbody>
           ${items.map(item => `
             <tr>
-              ${columns.map(c => `<td>${c.cell(item)}</td>`).join('\n              ')}
+              ${columns.map(c => `<td>${c.cell(item).replaceAll('class="user-def-table-input"', `class="user-def-table-input" aria-label="${escapeHtml(c.header)}"`)}</td>`).join('\n              ')}
             </tr>
           `).join('')}
         </tbody>
