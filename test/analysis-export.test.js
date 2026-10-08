@@ -339,7 +339,7 @@ test('used springs export stiffness and flag an undefined rotational value', () 
 
   let model = buildAnalysisModel(state);
   assert.deepEqual(model.springs[0], {
-    symbol: 'K1', kr: null, krY: null, krZ: null, kt: 500, memo: '', isDefault: false,
+    symbol: 'K1', kr: null, krY: null, krZ: null, kt: 500, kv: null, memo: '', isDefault: false,
   });
   assert.equal(model.meta.warnings.undefinedSpringStiffness, true);
   assert.deepEqual(model.meta.warnings.undefinedSpringSymbols, ['K1']);
@@ -360,7 +360,7 @@ test('directional spring stiffness preserves explicit releases and legacy fallba
   });
   let model = buildAnalysisModel(state);
   assert.deepEqual(model.springs[0], {
-    symbol: 'DIRECTIONAL', kr: 2e8, krY: 'pin', krZ: 3e8, kt: 'rigid', memo: '', isDefault: false,
+    symbol: 'DIRECTIONAL', kr: 2e8, krY: 'pin', krZ: 3e8, kt: 'rigid', kv: null, memo: '', isDefault: false,
   });
   assert.equal(model.meta.warnings.undefinedSpringStiffness, false);
   assert.equal(model.units.rotationalStiffness, 'N*mm/rad');

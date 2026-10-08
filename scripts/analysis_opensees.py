@@ -15,6 +15,22 @@ LOADS = ("fx", "fy", "fz", "mx", "my", "mz")
 
 def prepare(model, load_case, self_weight="error"):
     nodes, elements, sections = geometry(model)
+    settings = model.get("analysisSettings", {})
+    if not isinstance(settings, dict):
+        raise ModelError("analysisSettings: expected object")
+    shear = settings.get("ignoreShearDeformation")
+    if shear is not None and not isinstance(shear, bool):
+        raise ModelError("analysisSettings.ignoreShearDeformation: expected boolean or null")
+    if shear is False:
+        raise ModelError("Shear deformation requires a Timoshenko-capable adapter; this subset uses Euler-Bernoulli")
+    surface_sections = model.get("surfaceSections", [])
+    if not isinstance(surface_sections, list):
+        raise ModelError("surfaceSections: expected array")
+    for section in surface_sections:
+        if not isinstance(section, dict) or not isinstance(section.get("edgeSprings", {}), dict):
+            raise ModelError("surfaceSections: expected objects with edgeSprings object")
+        if section.get("endRotationalSpring") or any(section.get("edgeSprings", {}).values()):
+            raise ModelError("Surface panel connections require a floor-model adapter; this subset only models frame members")
     materials = indexed(model.get("materials"), "materials", "name")
     cases = model.get("loadCases", [])
     if load_case not in cases:

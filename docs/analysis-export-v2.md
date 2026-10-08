@@ -28,7 +28,9 @@ mm-N 系の値を持ちます。
 | `levels` / `nodes` | レベルと共有3D節点 |
 | `elements` | 線材要素 |
 | `sections` / `materials` | 使用断面と使用材料 |
-| `springs` | 使用中の材端ばね |
+| `springs` | 使用中の材端・面材接合ばね |
+| `surfaceSections` / `surfaces` | 面材断面の接合指定とCAD形状。有限要素化は下流側で行う |
+| `analysisSettings.ignoreShearDeformation` | 無視true／考慮false／未指定null |
 | `supports` | 支点 |
 | `loadCases` / `loads` / `loadCombinations` | 荷重情報 |
 | `massSources` / `selfWeight` | 固有値解析用の質量換算前提 |
@@ -86,7 +88,7 @@ mm-N 系の値を持ちます。
 | Ay、Az、Avy、Avz | `mm2` |
 | Iy、Iz、J | `mm4` |
 | 回転ばね kr、krY、krZ | `N*mm/rad` |
-| 並進ばね kt | `N/mm` |
+| 並進ばね kt、鉛直ばね kv | `N/mm` |
 
 画面入力が N/m、N/m²、N·m の荷重だけは、従来どおりエクスポート時に
 上表の mm-N 系へ変換されます。
@@ -157,6 +159,7 @@ CSV の `sect_header` / `sect` 行では、従来列の後ろに `shape`、
 ## ばね
 
 使用ばねは `symbol`、`kr`、`krY`、`krZ`、`kt`、`memo`、`isDefault` を持ちます。
+schema 15以降は独立した鉛直並進剛性 `kv` も保持します。
 `kr` は両曲げ方向に共通の材端回転ばね基本値です。`krY` は local y まわり
 （水平梁の鉛直曲げ）、`krZ` は local z まわり（水平梁の水平曲げ）の上書き値です。
 方向値が `null` の場合は `kr` にフォールバックします。出力JSON/CSVは明示値と `null` を
@@ -172,6 +175,14 @@ CSV の `sect_header` / `sect` 行では、従来列の後ろに `shape`、
 CSVでは既存 `spring` 列の末尾に `krY_N_mm_rad`、`krZ_N_mm_rad` を追加します。
 同梱OpenSees変換器は引き続き明示 `condition: rigid` のみ対応し、ばね値がすべて
 `"rigid"` の場合も `condition: spring` を自動変換せず停止します。
+
+面材端のばね参照はローカルY回り鉛直曲げ `krY ?? kr`、面材の縁接合参照は `kv` を検証します。
+参照先が存在しない場合も `undefinedSpringSymbols` に列挙します。CSVのspring行は末尾へ `kv_N_mm` を追加します。
+
+面材の `unitWeight`、断面の `additionalWeight` はCADのN/m²から解析のN/mm²へ換算します。
+`surfaceSections` / `surfaces` は接合設定と形状の交換情報で、剛性行列に組み込まれた要素ではありません。
+CSVは `surface_sect` / `surface` / `analysis_setting` 行を追加します。
+詳細は[schema 15](floor-vibration-schema15.md)を参照してください。
 
 ## 質量源と自重
 

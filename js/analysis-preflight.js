@@ -142,6 +142,14 @@ export function buildAnalysisPreflight(state, options = {}) {
   ];
   for (const [flag, values, code, messageKey] of warningFields) {
     if (!model.meta.warnings[flag]) continue;
+    const surfaceTargets = (model.surfaces || []).filter(surface => {
+      const section = (model.surfaceSections || []).find(item => item.type === surface.type && item.name === surface.sectionName);
+      if (!section) return false;
+      if (code === 'undefined-materials') return model.meta.warnings[values].includes(section.material);
+      if (code === 'undefined-springs') return [section.endRotationalSpring, ...Object.values(section.edgeSprings)]
+        .some(symbol => symbol && model.meta.warnings[values].includes(symbol));
+      return false;
+    }).map(surface => ({ elementType: 'surface', elementId: surface.sourceId }));
     issues.push(issue('error', code, messageKey, {
       values: model.meta.warnings[values].join(', '),
     }, code === 'undefined-mass-sources'
@@ -150,7 +158,7 @@ export function buildAnalysisPreflight(state, options = {}) {
       : state.members.filter(member => code === 'undefined-materials'
         ? model.meta.warnings[values].includes(member.material)
         : [member.endI, member.endJ].some(end => end?.condition === 'spring' && model.meta.warnings[values].includes(end.springSymbol)))
-        .map(member => ({ elementType: 'member', elementId: member.id }))));
+        .map(member => ({ elementType: 'member', elementId: member.id })).concat(surfaceTargets)));
   }
 
   const undefinedSections = model.elements.filter(element => element.sectionId === null);
@@ -199,4 +207,3 @@ export function buildAnalysisPreflight(state, options = {}) {
     },
   };
 }
-

@@ -659,7 +659,10 @@ body.property-collapsed #property-panel > * {
   width: min(1480px, 96vw);
 }
 .modal-user-def-list .modal-body {
-  overflow: auto;
+  overflow-y: auto;
+}
+.modal-user-def-list .user-def-table-scroll {
+  overflow-x: auto;
 }
 .modal-user-def-list table {
   width: max-content;
@@ -697,6 +700,11 @@ body.property-collapsed #property-panel > * {
 }
 .modal-user-def-list [data-field="propertySource"] {
   width: 180px;
+}
+.modal-user-def-list [data-field="endRotationalSpring"],
+.modal-user-def-list [data-field="panelToPanel"],
+.modal-user-def-list [data-field="panelToBeam"] {
+  width: 220px;
 }
 .modal-user-def-list [data-field="memo"] {
   width: 240px;

@@ -20,11 +20,16 @@ export function createDefaultAnalysisSettings() {
   return {
     massSources: { ...DEFAULT_MASS_SOURCE_FACTORS },
     selfWeightMode: 'fromDensity',
+    ignoreShearDeformation: null,
   };
 }
 
 export function normalizeAnalysisSettings(rawSettings) {
   const raw = rawSettings && typeof rawSettings === 'object' ? rawSettings : {};
+  if (raw.ignoreShearDeformation !== null && raw.ignoreShearDeformation !== undefined &&
+      typeof raw.ignoreShearDeformation !== 'boolean') {
+    throw new Error('ignoreShearDeformation must be a boolean or null');
+  }
   const rawMassSources = raw.massSources && typeof raw.massSources === 'object'
     ? raw.massSources
     : null;
@@ -43,12 +48,15 @@ export function normalizeAnalysisSettings(rawSettings) {
     selfWeightMode: SELF_WEIGHT_MODES.has(raw.selfWeightMode)
       ? raw.selfWeightMode
       : 'fromDensity',
+    ignoreShearDeformation: typeof raw.ignoreShearDeformation === 'boolean'
+      ? raw.ignoreShearDeformation : null,
   };
 }
 
 export function isDefaultAnalysisSettings(settings) {
   const normalized = normalizeAnalysisSettings(settings);
   return normalized.selfWeightMode === 'fromDensity' &&
+    normalized.ignoreShearDeformation === null &&
     LOAD_CASES.every(loadCase =>
       normalized.massSources[loadCase] === DEFAULT_MASS_SOURCE_FACTORS[loadCase]
     );
@@ -56,6 +64,7 @@ export function isDefaultAnalysisSettings(settings) {
 
 function optionalNonNegativeNumber(value) {
   if (value === null || value === undefined || value === '') return null;
+  if (typeof value !== 'number' && typeof value !== 'string') return null;
   const number = Number(value);
   return Number.isFinite(number) && number >= 0 ? number : null;
 }
