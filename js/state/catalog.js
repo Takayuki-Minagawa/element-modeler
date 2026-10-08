@@ -1,7 +1,8 @@
 
-import { hasOwn, sanitizeOptionalPositiveNumber, sanitizeText } from '../domain/model.js';
+import { hasOwn, sanitizeText } from '../domain/model.js';
 import { DEFAULT_SECTION_B_MM, DEFAULT_SECTION_H_MM } from '../constants.js';
 import { positiveNumber as sanitizePositiveNumber } from '../geometry-utils.js';
+import { calculateSurfaceUnitWeight } from '../surface-weight.js';
 
 import {
   cloneSection,
@@ -18,6 +19,15 @@ import {
   normalizeSpringEntry,
   sanitizeColor,
 } from '../section-catalog.js';
+
+function refreshSurfaceWeightsForMaterial(state, materialName) {
+  for (const surface of state.surfaces) {
+    const section = state._getSectionRef('surface', surface.type, surface.sectionName);
+    if (section?.material !== materialName) continue;
+    const unitWeight = calculateSurfaceUnitWeight(section, state._getMaterialRef(materialName));
+    if (unitWeight !== null) surface.unitWeight = unitWeight;
+  }
+}
 
 // Catalog lifecycle, lookup, and propagation to model elements.
 // AppState delegates with its existing receiver and public method names.
@@ -107,12 +117,16 @@ export const catalogState = {
       Object.assign(section, normalized);
       this._normalizeSectionEndDefaults(section);
     } else {
-      if (hasOwn(props, 'color')) {
-        section.color = sanitizeColor(props.color, defaultColorForSection(target, normalizedType));
+      let normalized;
+      try {
+        normalized = normalizeCatalogSectionEntry({
+          ...section, ...props, target: 'surface', type: normalizedType, name: section.name,
+        });
+      } catch {
+        return null;
       }
-      if (hasOwn(props, 'memo')) {
-        section.memo = sanitizeText(props.memo) || '';
-      }
+      if (!normalized) return null;
+      Object.assign(section, normalized);
     }
 
     if (target === 'member') {
@@ -192,15 +206,14 @@ export const catalogState = {
   updateSpring(symbol, props = {}) {
     const spring = this._getSpringRef(symbol);
     if (!spring || spring.isDefault) return null;
-    if (hasOwn(props, 'kr')) {
-      spring.kr = sanitizeOptionalPositiveNumber(props.kr);
+    let normalized;
+    try {
+      normalized = normalizeSpringEntry({ ...spring, ...props, symbol });
+    } catch {
+      return null;
     }
-    if (hasOwn(props, 'kt')) {
-      spring.kt = sanitizeOptionalPositiveNumber(props.kt);
-    }
-    if (hasOwn(props, 'memo')) {
-      spring.memo = sanitizeText(props.memo) || '';
-    }
+    if (!normalized) return null;
+    Object.assign(spring, normalized);
     this._touch();
     return { ...spring };
   },
@@ -257,6 +270,7 @@ export const catalogState = {
     if (this._getMaterialRef(normalized.name)) return null;
     const material = { ...normalized, isDefault: false };
     this.materialCatalog.push(material);
+    refreshSurfaceWeightsForMaterial(this, material.name);
     this._touch();
     return { ...material };
   },
@@ -270,6 +284,7 @@ export const catalogState = {
     Object.assign(material, normalized, {
       isDefault: Boolean(defaultDefinition && isSameMaterialDefinition(defaultDefinition, normalized)),
     });
+    refreshSurfaceWeightsForMaterial(this, name);
     this._touch();
     return { ...material };
   },
@@ -279,7 +294,7 @@ export const catalogState = {
     const index = this.materialCatalog.findIndex(material => material.name === name);
     if (index < 0) return false;
     const inUse = this.sectionCatalog.some(
-      section => section.target === 'member' && section.material === name
+      section => section.material === name
     );
     if (inUse) return false;
     this.materialCatalog.splice(index, 1);
@@ -320,15 +335,15 @@ export const catalogState = {
   _createImportedMemberSection(memberType, material, b, h, color = null) {
     const normalizedType = this._normalizeSectionType('member', memberType);
     const section = {
-      target: 'member',
-      type: normalizedType,
-      name: this._nextCustomSectionName('member', normalizedType),
-      material: sanitizeText(material) || 'steel',
-      b: sanitizePositiveNumber(b, DEFAULT_SECTION_B_MM),
-      h: sanitizePositiveNumber(h, DEFAULT_SECTION_H_MM),
-      color: sanitizeColor(color, defaultColorForSection('member', normalizedType)),
-      defaultEndI: { condition: 'pin', springSymbol: null },
-      defaultEndJ: { condition: 'pin', springSymbol: null },
+      ...normalizeCatalogSectionEntry({
+        target: 'member',
+        type: normalizedType,
+        name: this._nextCustomSectionName('member', normalizedType),
+        material: sanitizeText(material) || 'steel',
+        b: sanitizePositiveNumber(b, DEFAULT_SECTION_B_MM),
+        h: sanitizePositiveNumber(h, DEFAULT_SECTION_H_MM),
+        color: sanitizeColor(color, defaultColorForSection('member', normalizedType)),
+      }),
       isDefault: false,
     };
     this.sectionCatalog.push(section);
@@ -414,6 +429,8 @@ export const catalogState = {
       section?.color || surface.color,
       defaultColorForSection('surface', surface.type)
     );
+    const unitWeight = calculateSurfaceUnitWeight(section, this._getMaterialRef(section?.material));
+    if (unitWeight !== null) surface.unitWeight = unitWeight;
   },
 
   _normalizeMemberEnd(endInfo) {

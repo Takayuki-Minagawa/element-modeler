@@ -19,7 +19,7 @@ export const DEFAULT_SECTION_DEFINITIONS = [
 ];
 
 export const DEFAULT_SPRING_DEFINITIONS = [
-  { symbol: '_SP', kr: null, kt: null, memo: '回転バネ', isDefault: true },
+  { symbol: '_SP', kr: null, krY: null, krZ: null, kt: null, memo: '回転バネ', isDefault: true },
 ];
 
 // Trial defaults for analysis-model preparation. They are intentionally
@@ -36,6 +36,8 @@ export const DEFAULT_SPRING_SYMBOL_SET = new Set(DEFAULT_SPRING_DEFINITIONS.map(
 export const DEFAULT_MATERIAL_NAME_SET = new Set(DEFAULT_MATERIAL_DEFINITIONS.map(m => m.name));
 export const END_FIXITIES = new Set(['pin', 'rigid', 'spring']);
 export const SECTION_SHAPES = new Set(['rectangle', 'hSection', 'boxSection']);
+export const SECTION_PROPERTY_SOURCES = new Set(['catalog', 'computed', 'manual']);
+export const SURFACE_SELF_WEIGHT_MODES = new Set(['manual', 'fromDensity']);
 export const MEMBER_SECTION_TYPE_ALIAS = {
   brace: 'hbrace',
 };
@@ -68,7 +70,11 @@ export function createDefaultSectionCatalog() {
       boxThickness: null,
       shearAreaRatioY: null,
       shearAreaRatioZ: null,
-    } : {}),
+      designation: null,
+      propertySource: null,
+      Avy: null,
+      Avz: null,
+    } : { thickness: null, selfWeightMode: null, additionalWeight: null }),
     defaultEndI: s.defaultEndI ? { ...s.defaultEndI } : undefined,
     defaultEndJ: s.defaultEndJ ? { ...s.defaultEndJ } : undefined,
   }));
@@ -103,6 +109,8 @@ export function normalizeCatalogSectionEntry(entry) {
       Iy: entry.Iy,
       Iz: entry.Iz,
       J: entry.J,
+      Avy: entry.Avy,
+      Avz: entry.Avz,
     };
     for (const [property, value] of Object.entries(rawProperties)) {
       if (!isValidOptionalPositiveNumber(value)) {
@@ -117,6 +125,19 @@ export function normalizeCatalogSectionEntry(entry) {
     const b = sanitizePositiveNumber(entry.b, DEFAULT_SECTION_B_MM);
     const h = sanitizePositiveNumber(entry.h, DEFAULT_SECTION_H_MM);
     memberShape = normalizeMemberShape(entry, b, h, name);
+    if (!isValidOptionalChoice(entry.propertySource, SECTION_PROPERTY_SOURCES)) {
+      throw new Error(`Invalid section property source: ${name}`);
+    }
+  } else {
+    if (!isValidOptionalPositiveNumber(entry.thickness)) {
+      throw new Error(`Invalid surface thickness: ${name}`);
+    }
+    if (!isValidOptionalNonNegativeNumber(entry.additionalWeight)) {
+      throw new Error(`Invalid surface additional weight: ${name}`);
+    }
+    if (!isValidOptionalChoice(entry.selfWeightMode, SURFACE_SELF_WEIGHT_MODES)) {
+      throw new Error(`Invalid surface self weight mode: ${name}`);
+    }
   }
 
   const normalized = {
@@ -134,6 +155,10 @@ export function normalizeCatalogSectionEntry(entry) {
     normalized.Iy = optionalPositiveNumber(entry.Iy);
     normalized.Iz = optionalPositiveNumber(entry.Iz);
     normalized.J = optionalPositiveNumber(entry.J);
+    normalized.Avy = optionalPositiveNumber(entry.Avy);
+    normalized.Avz = optionalPositiveNumber(entry.Avz);
+    normalized.designation = sanitizeText(entry.designation) || null;
+    normalized.propertySource = sanitizeText(entry.propertySource) || null;
     normalized.shape = memberShape.shape;
     normalized.flangeThickness = memberShape.flangeThickness;
     normalized.webThickness = memberShape.webThickness;
@@ -142,6 +167,10 @@ export function normalizeCatalogSectionEntry(entry) {
     normalized.shearAreaRatioZ = optionalRatio(entry.shearAreaRatioZ);
     normalized.defaultEndI = normalizeSectionDefaultEnd(entry.defaultEndI || entry.endI);
     normalized.defaultEndJ = normalizeSectionDefaultEnd(entry.defaultEndJ || entry.endJ);
+  } else {
+    normalized.thickness = optionalPositiveNumber(entry.thickness);
+    normalized.selfWeightMode = sanitizeText(entry.selfWeightMode) || null;
+    normalized.additionalWeight = isBlank(entry.additionalWeight) ? null : Number(entry.additionalWeight);
   }
   return normalized;
 }
@@ -150,10 +179,16 @@ export function normalizeSpringEntry(entry) {
   if (!entry) return null;
   const symbol = sanitizeText(entry.symbol || entry.name);
   if (!symbol) return null;
+  const stiffness = {};
+  for (const field of ['kr', 'krY', 'krZ', 'kt']) {
+    if (!isValidOptionalSpringStiffness(entry[field])) {
+      throw new Error(`Invalid spring stiffness ${field}: ${symbol}`);
+    }
+    stiffness[field] = normalizeSpringStiffness(entry[field]);
+  }
   return {
     symbol,
-    kr: optionalPositiveNumber(entry.kr),
-    kt: optionalPositiveNumber(entry.kt),
+    ...stiffness,
     memo: sanitizeText(entry.memo) || '',
   };
 }
@@ -170,15 +205,51 @@ export function normalizeMaterialEntry(entry) {
 }
 
 export function isValidOptionalPositiveNumber(value) {
-  if (value === null || value === undefined) return true;
-  if (typeof value === 'string' && value.trim() === '') return true;
+  if (isBlank(value)) return true;
+  if (typeof value !== 'string' && typeof value !== 'number') return false;
   const number = Number(value);
   return Number.isFinite(number) && number > 0;
+}
+
+function isBlank(value) {
+  return value === null || value === undefined || (typeof value === 'string' && value.trim() === '');
+}
+
+function isValidOptionalChoice(value, choices) {
+  return isBlank(value) || (typeof value === 'string' && choices.has(value.trim()));
+}
+
+export function isValidOptionalNonNegativeNumber(value) {
+  if (isBlank(value)) return true;
+  if (typeof value !== 'string' && typeof value !== 'number') return false;
+  const number = Number(value);
+  return Number.isFinite(number) && number >= 0;
+}
+
+export function isValidOptionalSpringStiffness(value) {
+  return value === 'pin' || value === 'rigid' || isValidOptionalPositiveNumber(value);
+}
+
+export function normalizeSpringStiffness(value) {
+  if (!isValidOptionalSpringStiffness(value)) throw new Error('Invalid spring stiffness');
+  return value === 'pin' || value === 'rigid' ? value : optionalPositiveNumber(value);
+}
+
+// Missing directional values inherit the common bending stiffness. A null
+// common value remains unspecified; consumers decide how to handle it.
+export function resolveSpringStiffness(spring) {
+  const kr = normalizeSpringStiffness(spring?.kr);
+  return {
+    krY: normalizeSpringStiffness(spring?.krY) ?? kr,
+    krZ: normalizeSpringStiffness(spring?.krZ) ?? kr,
+    kt: normalizeSpringStiffness(spring?.kt),
+  };
 }
 
 export function isValidOptionalRatio(value) {
   if (value === null || value === undefined) return true;
   if (typeof value === 'string' && value.trim() === '') return true;
+  if (typeof value !== 'string' && typeof value !== 'number') return false;
   const number = Number(value);
   return Number.isFinite(number) && number > 0 && number <= 1;
 }
@@ -245,17 +316,27 @@ export function isSameSectionDefinition(a, b) {
       optionalPositiveNumber(a.Iy) === optionalPositiveNumber(b.Iy) &&
       optionalPositiveNumber(a.Iz) === optionalPositiveNumber(b.Iz) &&
       optionalPositiveNumber(a.J) === optionalPositiveNumber(b.J) &&
+      optionalPositiveNumber(a.Avy) === optionalPositiveNumber(b.Avy) &&
+      optionalPositiveNumber(a.Avz) === optionalPositiveNumber(b.Avz) &&
+      (sanitizeText(a.designation) || null) === (sanitizeText(b.designation) || null) &&
+      (sanitizeText(a.propertySource) || null) === (sanitizeText(b.propertySource) || null) &&
       optionalRatio(a.shearAreaRatioY) === optionalRatio(b.shearAreaRatioY) &&
       optionalRatio(a.shearAreaRatioZ) === optionalRatio(b.shearAreaRatioZ) &&
       isSameMemberEnd(a.defaultEndI, b.defaultEndI) &&
       isSameMemberEnd(a.defaultEndJ, b.defaultEndJ)
+    )) &&
+    (a.target !== 'surface' || (
+      optionalPositiveNumber(a.thickness) === optionalPositiveNumber(b.thickness) &&
+      (sanitizeText(a.selfWeightMode) || null) === (sanitizeText(b.selfWeightMode) || null) &&
+      (isBlank(a.additionalWeight) ? null : Number(a.additionalWeight)) ===
+        (isBlank(b.additionalWeight) ? null : Number(b.additionalWeight))
     ));
 }
 
 export function isSameSpringDefinition(a, b) {
   return a.symbol === b.symbol &&
-    optionalPositiveNumber(a.kr) === optionalPositiveNumber(b.kr) &&
-    optionalPositiveNumber(a.kt) === optionalPositiveNumber(b.kt) &&
+    ['kr', 'krY', 'krZ', 'kt'].every(field =>
+      normalizeSpringStiffness(a[field]) === normalizeSpringStiffness(b[field])) &&
     (a.memo || '') === (b.memo || '');
 }
 
@@ -492,7 +573,7 @@ export function hydrateMaterialCatalog(rawCatalog) {
 }
 
 function optionalPositiveNumber(value) {
-  if (value === null || value === undefined || value === '') return null;
+  if (isBlank(value) || !isValidOptionalPositiveNumber(value)) return null;
   const number = Number(value);
   return Number.isFinite(number) && number > 0 ? number : null;
 }

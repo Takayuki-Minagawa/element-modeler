@@ -656,7 +656,64 @@ body.property-collapsed #property-panel > * {
 [hidden] { display: none !important;
 }
 .modal-user-def-list {
-  width: min(920px, 96vw);
+  width: min(1480px, 96vw);
+}
+.modal-user-def-list .modal-body {
+  overflow: auto;
+}
+.modal-user-def-list table {
+  width: max-content;
+  min-width: 100%;
+}
+.modal-user-def-list th,
+.modal-user-def-list td {
+  white-space: nowrap;
+}
+.modal-user-def-list th:first-child,
+.modal-user-def-list td:first-child {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: var(--surface);
+  box-shadow: 1px 0 0 var(--border);
+}
+.modal-user-def-list th:last-child,
+.modal-user-def-list td:last-child {
+  position: sticky;
+  right: 0;
+  z-index: 1;
+  background: var(--surface);
+  box-shadow: -1px 0 0 var(--border);
+}
+.modal-user-def-list .user-def-table-input {
+  width: 132px;
+}
+.modal-user-def-list [data-field="material"] {
+  width: 180px;
+}
+.modal-user-def-list [data-field="selfWeightMode"],
+.modal-user-def-list [data-field="designation"] {
+  width: 240px;
+}
+.modal-user-def-list [data-field="propertySource"] {
+  width: 180px;
+}
+.modal-user-def-list [data-field="memo"] {
+  width: 240px;
+}
+.modal-user-def-list [data-field="weightPreview"] {
+  display: block;
+  width: 300px;
+  white-space: normal;
+}
+.modal-user-def-list .user-def-table-input[type="color"] {
+  width: 48px;
+}
+.modal-user-def-list .user-def-table-btn {
+  white-space: nowrap;
+}
+.modal-user-def-list .user-def-table-actions {
+  flex-wrap: nowrap;
 }
 .settings-group {
   display: flex;

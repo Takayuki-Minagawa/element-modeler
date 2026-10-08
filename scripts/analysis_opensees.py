@@ -28,6 +28,7 @@ def prepare(model, load_case, self_weight="error"):
         raise ModelError("Density self-weight is outside the nodal-load subset. Supply explicit nodal DL and "
                          "set includedInDL, or explicitly use --self-weight omit for a load-only study")
     used = set()
+    ignored_shear_sections = set()
     prepared_elements = []
     for e in elements.values():
         if e.get("type") not in ("beam", "column", "hbrace", "vbrace"):
@@ -41,6 +42,14 @@ def prepare(model, load_case, self_weight="error"):
             raise ModelError(f"element {e['id']}: missing material")
         section = sections[e["sectionId"]]
         values = [finite(section.get(k), f"section {section['id']}.{k}", True) for k in ("A", "J", "Iy", "Iz")]
+        # Explicit shear areas are exchange data for Timoshenko consumers.
+        # This elasticBeamColumn subset has no shear-deformation terms.
+        for key in ("Ay", "Az", "Avy", "Avz"):
+            if section.get(key) is not None:
+                finite(section[key], f"section {section['id']}.{key}", True)
+                if model.get("units", {}).get("shearArea") != "mm2":
+                    raise ModelError("units.shearArea: expected mm2")
+                ignored_shear_sections.add(section["id"])
         E, G = [finite(material.get(k), f"material {material['name']}.{k}", True) for k in ("E", "G")]
         orientation = axes(point(nodes[e["nodeI"]]), point(nodes[e["nodeJ"]]))
         prepared_elements.append({**e, "axes": orientation, "properties": [values[0], E, G, *values[1:]]})
@@ -75,10 +84,14 @@ def prepare(model, load_case, self_weight="error"):
         assignments.append({"loadId": load["id"], "sourceId": load.get("sourceId"), "nodeId": node_id, "values": vector})
     if not assignments:
         raise ModelError(f"No nodal loads in case {load_case}")
+    warnings = (["Density self-weight explicitly omitted; this is a load-only analysis."]
+                if mode == "fromDensity" else [])
+    if ignored_shear_sections:
+        warnings.append("Euler-Bernoulli elasticBeamColumn does not use shear areas Ay/Az/Avy/Avz "
+                        "or shear deformation; sections: " + ", ".join(map(str, sorted(ignored_shear_sections))))
     return {"nodes": nodes, "elements": prepared_elements, "fixities": fixities, "loads": loads,
             "assignments": assignments, "loadCase": load_case, "selfWeight": mode,
-            "warnings": (["Density self-weight explicitly omitted; this is a load-only analysis."]
-                         if mode == "fromDensity" else [])}
+            "warnings": warnings}
 
 
 def commands(prepared):

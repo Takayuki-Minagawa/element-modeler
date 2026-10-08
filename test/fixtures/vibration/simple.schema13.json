@@ -1,0 +1,451 @@
+{
+  "schemaVersion": 13,
+  "meta": {
+    "name": "Synthetic simple migration fixture",
+    "unit": "mm",
+    "createdAt": "2025-01-01T00:00:00.000Z"
+  },
+  "settings": {
+    "gridSize": 1000,
+    "snap": true,
+    "wallDisplayOffset": 120,
+    "showSupports": true,
+    "widePick": false,
+    "planLayerDisplayMode": "all",
+    "planLayerSelectionLock": false,
+    "view3dLayerDisplayMode": "all",
+    "member3dRenderMode": "solid",
+    "beam3dSectionMode": "box",
+    "showMembers": true,
+    "showSurfaces": true,
+    "showLoads": true,
+    "showMemberEndSymbols": false,
+    "showPlacementLabels": true,
+    "memberTypeFilter": "all",
+    "sectionFilter": "all",
+    "displayPreset": "input",
+    "showAxes": true,
+    "showUnderlay": true,
+    "autosave": true
+  },
+  "levels": [
+    {
+      "id": "L0",
+      "name": "GL",
+      "z": 0
+    },
+    {
+      "id": "L1",
+      "name": "2F",
+      "z": 2800
+    }
+  ],
+  "axes": [],
+  "loadCombinations": [
+    {
+      "id": "LC1",
+      "name": "G+P",
+      "factors": {
+        "DL": 1,
+        "LL": 1
+      }
+    },
+    {
+      "id": "LC2",
+      "name": "G+P+EQX",
+      "factors": {
+        "DL": 1,
+        "LL": 1,
+        "EQX": 1
+      }
+    },
+    {
+      "id": "LC3",
+      "name": "G+P+EQY",
+      "factors": {
+        "DL": 1,
+        "LL": 1,
+        "EQY": 1
+      }
+    },
+    {
+      "id": "LC4",
+      "name": "G+P+WX",
+      "factors": {
+        "DL": 1,
+        "LL": 1,
+        "WX": 1
+      }
+    },
+    {
+      "id": "LC5",
+      "name": "G+P+WY",
+      "factors": {
+        "DL": 1,
+        "LL": 1,
+        "WY": 1
+      }
+    }
+  ],
+  "analysisSettings": {
+    "massSources": {
+      "DL": 1,
+      "LL": 0.3,
+      "EQX": 0,
+      "EQY": 0,
+      "WX": 0,
+      "WY": 0
+    },
+    "selfWeightMode": "fromDensity"
+  },
+  "underlay": null,
+  "nodes": [
+    {
+      "id": 1,
+      "x": 0,
+      "y": 0,
+      "z": 0
+    },
+    {
+      "id": 2,
+      "x": 1200,
+      "y": 0,
+      "z": 0
+    }
+  ],
+  "materialCatalog": [
+    {
+      "name": "steel",
+      "E": 205000,
+      "G": 79000,
+      "density": 7850,
+      "isDefault": true
+    },
+    {
+      "name": "rc",
+      "E": 24000,
+      "G": 10000,
+      "density": 2400,
+      "isDefault": true
+    },
+    {
+      "name": "wood",
+      "E": 10000,
+      "G": 650,
+      "density": 500,
+      "isDefault": true
+    },
+    {
+      "name": "SyntheticPanel",
+      "E": 3600,
+      "G": 1400,
+      "density": 480,
+      "isDefault": false
+    }
+  ],
+  "sectionCatalog": [
+    {
+      "target": "member",
+      "type": "beam",
+      "name": "_G",
+      "material": "steel",
+      "b": 200,
+      "h": 400,
+      "color": "#666666",
+      "defaultEndI": {
+        "condition": "pin",
+        "springSymbol": null
+      },
+      "defaultEndJ": {
+        "condition": "pin",
+        "springSymbol": null
+      },
+      "isDefault": true,
+      "shape": "rectangle",
+      "flangeThickness": null,
+      "webThickness": null,
+      "boxThickness": null,
+      "shearAreaRatioY": null,
+      "shearAreaRatioZ": null
+    },
+    {
+      "target": "member",
+      "type": "column",
+      "name": "_C",
+      "material": "steel",
+      "b": 105,
+      "h": 105,
+      "color": "#666666",
+      "defaultEndI": {
+        "condition": "pin",
+        "springSymbol": null
+      },
+      "defaultEndJ": {
+        "condition": "pin",
+        "springSymbol": null
+      },
+      "isDefault": true,
+      "shape": "rectangle",
+      "flangeThickness": null,
+      "webThickness": null,
+      "boxThickness": null,
+      "shearAreaRatioY": null,
+      "shearAreaRatioZ": null
+    },
+    {
+      "target": "member",
+      "type": "hbrace",
+      "name": "_H",
+      "material": "steel",
+      "b": 20,
+      "h": 20,
+      "color": "#666666",
+      "defaultEndI": {
+        "condition": "pin",
+        "springSymbol": null
+      },
+      "defaultEndJ": {
+        "condition": "pin",
+        "springSymbol": null
+      },
+      "isDefault": true,
+      "shape": "rectangle",
+      "flangeThickness": null,
+      "webThickness": null,
+      "boxThickness": null,
+      "shearAreaRatioY": null,
+      "shearAreaRatioZ": null
+    },
+    {
+      "target": "member",
+      "type": "vbrace",
+      "name": "_V",
+      "material": "steel",
+      "b": 20,
+      "h": 20,
+      "color": "#666666",
+      "defaultEndI": {
+        "condition": "pin",
+        "springSymbol": null
+      },
+      "defaultEndJ": {
+        "condition": "pin",
+        "springSymbol": null
+      },
+      "isDefault": true,
+      "shape": "rectangle",
+      "flangeThickness": null,
+      "webThickness": null,
+      "boxThickness": null,
+      "shearAreaRatioY": null,
+      "shearAreaRatioZ": null
+    },
+    {
+      "target": "surface",
+      "type": "floor",
+      "name": "_S",
+      "material": "",
+      "b": null,
+      "h": null,
+      "color": "#67a9cf",
+      "isDefault": true
+    },
+    {
+      "target": "surface",
+      "type": "exteriorWall",
+      "name": "_OW",
+      "material": "",
+      "b": null,
+      "h": null,
+      "color": "#b57a6b",
+      "isDefault": true
+    },
+    {
+      "target": "surface",
+      "type": "wall",
+      "name": "_IW",
+      "material": "",
+      "b": null,
+      "h": null,
+      "color": "#b57a6b",
+      "isDefault": true
+    },
+    {
+      "target": "surface",
+      "type": "roof",
+      "name": "_R",
+      "material": "",
+      "b": null,
+      "h": null,
+      "color": "#8b6f47",
+      "isDefault": true
+    },
+    {
+      "target": "surface",
+      "type": "eave",
+      "name": "_E",
+      "material": "",
+      "b": null,
+      "h": null,
+      "color": "#4f9a8a",
+      "isDefault": true
+    },
+    {
+      "target": "surface",
+      "type": "gableWall",
+      "name": "_GW",
+      "material": "",
+      "b": null,
+      "h": null,
+      "color": "#bf6f5e",
+      "isDefault": true
+    },
+    {
+      "target": "member",
+      "type": "beam",
+      "name": "SyntheticBeam",
+      "material": "steel",
+      "b": 80,
+      "h": 160,
+      "color": "#667788",
+      "memo": "",
+      "A": null,
+      "Iy": null,
+      "Iz": null,
+      "J": null,
+      "shape": "hSection",
+      "flangeThickness": 8,
+      "webThickness": 6,
+      "boxThickness": null,
+      "shearAreaRatioY": null,
+      "shearAreaRatioZ": null,
+      "defaultEndI": {
+        "condition": "pin",
+        "springSymbol": null
+      },
+      "defaultEndJ": {
+        "condition": "pin",
+        "springSymbol": null
+      },
+      "isDefault": false
+    },
+    {
+      "target": "surface",
+      "type": "floor",
+      "name": "SyntheticFloor",
+      "material": "SyntheticPanel",
+      "b": null,
+      "h": null,
+      "color": "#99bbcc",
+      "memo": "Artificial rectangle for migration tests; no project geometry",
+      "isDefault": false
+    }
+  ],
+  "springCatalog": [
+    {
+      "symbol": "_SP",
+      "kr": null,
+      "kt": null,
+      "memo": "回転バネ",
+      "isDefault": true
+    },
+    {
+      "symbol": "SyntheticEnd",
+      "kr": 40000000,
+      "kt": null,
+      "memo": "Synthetic legacy spring for migration tests",
+      "isDefault": false
+    }
+  ],
+  "members": [
+    {
+      "id": "M1",
+      "type": "beam",
+      "startNodeId": 1,
+      "endNodeId": 2,
+      "sectionName": "SyntheticBeam",
+      "levelId": "L0",
+      "color": "#667788",
+      "topLevelId": null,
+      "geometryMode": "level",
+      "startZ": null,
+      "endZ": null,
+      "roofRole": null,
+      "bracePattern": "single",
+      "endI": {
+        "condition": "spring",
+        "springSymbol": "SyntheticEnd"
+      },
+      "endJ": {
+        "condition": "pin",
+        "springSymbol": null
+      }
+    }
+  ],
+  "surfaces": [
+    {
+      "id": "S1",
+      "type": "floor",
+      "sectionName": "SyntheticFloor",
+      "levelId": "L0",
+      "topLevelId": "L1",
+      "loadDirection": "x",
+      "heightMode": "custom",
+      "bottomOffset": 0,
+      "topOffset": 0,
+      "includeWind": false,
+      "includeSeismicWeight": false,
+      "unitWeight": 900,
+      "color": "#99bbcc",
+      "x1": 0,
+      "y1": 0,
+      "x2": 1200,
+      "y2": 800,
+      "shape": "rect",
+      "points": null
+    }
+  ],
+  "loads": [
+    {
+      "id": "LD1",
+      "type": "pointLoad",
+      "levelId": "L0",
+      "loadCase": "DL",
+      "x1": 300,
+      "y1": 0,
+      "fx": 0,
+      "fy": 0,
+      "fz": -50,
+      "mx": 0,
+      "my": 0,
+      "mz": 0,
+      "color": "#ba68c8"
+    }
+  ],
+  "supports": [
+    {
+      "id": "SUP1",
+      "x": 0,
+      "y": 0,
+      "levelId": "L0",
+      "dx": true,
+      "dy": true,
+      "dz": true,
+      "rx": false,
+      "ry": false,
+      "rz": false
+    },
+    {
+      "id": "SUP2",
+      "x": 1200,
+      "y": 0,
+      "levelId": "L0",
+      "dx": true,
+      "dy": true,
+      "dz": true,
+      "rx": false,
+      "ry": false,
+      "rz": false
+    }
+  ]
+}

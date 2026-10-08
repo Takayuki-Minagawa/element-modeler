@@ -339,7 +339,7 @@ test('used springs export stiffness and flag an undefined rotational value', () 
 
   let model = buildAnalysisModel(state);
   assert.deepEqual(model.springs[0], {
-    symbol: 'K1', kr: null, kt: 500, memo: '', isDefault: false,
+    symbol: 'K1', kr: null, krY: null, krZ: null, kt: 500, memo: '', isDefault: false,
   });
   assert.equal(model.meta.warnings.undefinedSpringStiffness, true);
   assert.deepEqual(model.meta.warnings.undefinedSpringSymbols, ['K1']);
@@ -348,6 +348,68 @@ test('used springs export stiffness and flag an undefined rotational value', () 
   model = buildAnalysisModel(state);
   assert.equal(model.springs[0].kr, 120000);
   assert.equal(model.meta.warnings.undefinedSpringStiffness, false);
+});
+
+test('directional spring stiffness preserves explicit releases and legacy fallback in JSON and CSV', () => {
+  const state = new AppState();
+  state.addSpring({ symbol: 'DIRECTIONAL', kr: 2e8, krY: 'pin', krZ: 3e8, kt: 'rigid' });
+  const start = state.addNode(0, 0);
+  const end = state.addNode(1000, 0);
+  state.addMember(start.id, end.id, {
+    type: 'beam', endI: { condition: 'spring', springSymbol: 'DIRECTIONAL' },
+  });
+  let model = buildAnalysisModel(state);
+  assert.deepEqual(model.springs[0], {
+    symbol: 'DIRECTIONAL', kr: 2e8, krY: 'pin', krZ: 3e8, kt: 'rigid', memo: '', isDefault: false,
+  });
+  assert.equal(model.meta.warnings.undefinedSpringStiffness, false);
+  assert.equal(model.units.rotationalStiffness, 'N*mm/rad');
+  assert.equal(model.units.translationalStiffness, 'N/mm');
+  const csv = buildAnalysisCSV(state, { model });
+  assert.match(csv, /\r\nspring_header,symbol,memo,kr_N_mm_rad,kt_N_mm,is_default,krY_N_mm_rad,krZ_N_mm_rad,/);
+  assert.match(csv, /\r\nspring,DIRECTIONAL,,200000000,rigid,0,pin,300000000,/);
+
+  state.updateSpring('DIRECTIONAL', { kr: 'rigid', krY: null, krZ: null });
+  model = buildAnalysisModel(state);
+  assert.equal(model.springs[0].kr, 'rigid');
+  assert.equal(model.springs[0].krY, null);
+  assert.equal(model.springs[0].krZ, null);
+  assert.equal(model.meta.warnings.undefinedSpringStiffness, false);
+
+  state.updateSpring('DIRECTIONAL', { kr: null, krY: 'pin', krZ: 'rigid' });
+  assert.equal(buildAnalysisModel(state).meta.warnings.undefinedSpringStiffness, false);
+  state.updateSpring('DIRECTIONAL', { krZ: null });
+  assert.deepEqual(buildAnalysisModel(state).meta.warnings.undefinedSpringSymbols, ['DIRECTIONAL']);
+});
+
+test('section exchange metadata preserves v2 provenance and explicit shear areas take precedence', () => {
+  const state = new AppState();
+  state.addSection({
+    target: 'member', type: 'beam', name: 'DECLARED', b: 100, h: 200,
+    designation: 'CUSTOM-200x100', propertySource: 'catalog', A: 21000,
+    Avy: 15000, Avz: null, shearAreaRatioY: 0.5, shearAreaRatioZ: 0.25,
+  });
+  const start = state.addNode(0, 0);
+  const end = state.addNode(1000, 0);
+  state.addMember(start.id, end.id, { type: 'beam', sectionName: 'DECLARED' });
+  const model = buildAnalysisModel(state);
+  const section = model.sections[0];
+  assert.equal(section.designation, 'CUSTOM-200x100');
+  assert.equal(section.declaredPropertySource, 'catalog');
+  assert.deepEqual(section.propertySource, {
+    A: 'explicit', Iy: 'rectangle', Iz: 'rectangle', J: 'rectangle',
+  });
+  assert.equal(section.Avy, 15000);
+  assert.equal(section.Avz, null);
+  assert.equal(section.Ay, 15000);
+  assert.equal(section.Az, 5250);
+  assert.equal(section.shearAreaRatioY, 0.5);
+  const rows = buildAnalysisCSV(state, { model }).trim().split('\r\n').map(row => row.split(','));
+  assert.ok(rows.every(row => row.length === 28));
+  const header = rows.find(row => row[0] === 'sect_header');
+  const data = rows.find(row => row[0] === 'sect');
+  assert.equal(header[24], 'designation');
+  assert.deepEqual(data.slice(24), ['CUSTOM-200x100', 'catalog', '15000', '']);
 });
 
 test('mass-source defaults and overrides are exported with undefined detection', () => {

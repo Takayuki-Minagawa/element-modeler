@@ -1,5 +1,7 @@
 import { t } from '../../i18n.js';
 import { escapeHtml, markInputInvalid, clearInputInvalid } from '../../dom-utils.js';
+import { calculateSurfaceUnitWeight } from '../../surface-weight.js';
+import { surfaceWeightFeedback } from '../user-def/fields.js';
 
 import { isGableWallSurfaceType, isSlopedSurfaceType, isWallSurfaceType } from '../../domain/model.js';
 import { DEFAULT_EAVE_DEPTH_MM, DEFAULT_RAFTER_SPACING_MM, DEFAULT_ROOF_GROUP_ID } from '../../constants.js';
@@ -33,6 +35,9 @@ export const surfaceProperties = {
     const range = resolveSurfaceVerticalRange(this.state, surface);
     const wind = computeSurfaceWindProjectionM2(this.state, surface);
     const sectionDefs = this.state.listSections('surface', surface.type);
+    const weightSection = this.state.getSection('surface', surface.type, surface.sectionName);
+    const weightMaterial = this.state.getMaterial(weightSection?.material);
+    const calculatedWeight = calculateSurfaceUnitWeight(weightSection, weightMaterial);
     const sectionOptions = sectionDefs.length > 0
       ? sectionDefs.map(s =>
         `<option value="${escapeHtml(s.name)}" ${s.name === surface.sectionName ? 'selected' : ''}>${escapeHtml(s.name)}</option>`
@@ -110,9 +115,18 @@ export const surfaceProperties = {
         <input type="text" value="${vertices}" disabled>
       </div>
       <div class="prop-group">
-        <label>${t('unitWeight')} (${t('weightUnit_surface')})</label>
-        <input type="number" id="prop-surface-unit-weight" value="${surface.unitWeight || 0}" step="100">
+        <label for="prop-surface-unit-weight">${t('unitWeight')} (${t('weightUnit_surface')})</label>
+        <input type="number" id="prop-surface-unit-weight" value="${calculatedWeight ?? surface.unitWeight ?? 0}" min="0" step="any" ${calculatedWeight !== null ? 'readonly' : ''} aria-describedby="prop-surface-weight-note">
       </div>
+      <div class="prop-group">
+        <label>${t('userDefMaterialName')} / ${t('userDefSurfaceThickness')}</label>
+        <input id="prop-surface-weight-material" type="text" value="${escapeHtml(weightSection?.material || t('userDefUnspecified'))} / ${escapeHtml(weightSection?.thickness ?? t('userDefUnspecified'))}" readonly>
+      </div>
+      <div class="prop-group">
+        <label for="prop-surface-additional-weight">${t('userDefAdditionalWeight')}</label>
+        <input id="prop-surface-additional-weight" type="text" value="${escapeHtml(weightSection?.additionalWeight ?? t('userDefUnspecified'))}" readonly>
+      </div>
+      <p id="prop-surface-weight-note" class="quantity-note">${escapeHtml(surfaceWeightFeedback(weightSection, weightMaterial))}</p>
       ${isWindSurface ? `
       <div class="prop-group">
         <label class="prop-check-label">
@@ -159,7 +173,20 @@ export const surfaceProperties = {
     bind('prop-roof-direction', 'roofDirection');
     bind('prop-roof-base-offset', 'roofBaseOffset', (_value, el) => readNumberInput(el, surface.roofBaseOffset || 0));
     bind('prop-roof-group-id', 'roofGroupId', value => String(value || '').trim() || DEFAULT_ROOF_GROUP_ID);
-    bind('prop-surface-unit-weight', 'unitWeight', (_value, el) => Math.max(0, readNumberInput(el, surface.unitWeight || 0)));
+    const unitWeightInput = document.getElementById('prop-surface-unit-weight');
+    if (calculatedWeight === null) unitWeightInput?.addEventListener('change', () => {
+      const raw = unitWeightInput.value.trim();
+      const value = Number(raw);
+      if (unitWeightInput.validity?.badInput || raw === '' || !Number.isFinite(value) || value < 0) {
+        markInputInvalid(unitWeightInput, t('userDefInvalidSurfaceTotalWeight'));
+        return;
+      }
+      clearInputInvalid(unitWeightInput);
+      this._runModelChange(() => {
+        this.state.updateSurface(surface.id, { unitWeight: value });
+        this._notifyPropertyChange(surface.id);
+      });
+    });
     bind('prop-surface-include-wind', 'includeWind');
     bind('prop-surface-include-seismic', 'includeSeismicWeight');
 

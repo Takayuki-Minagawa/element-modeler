@@ -62,6 +62,34 @@ class CoreTests(unittest.TestCase):
             prepare(model, "LL")
         self.assertTrue(prepare(model, "LL", "omit")["warnings"])
 
+    def test_shear_areas_are_validated_and_reported_as_unused(self):
+        baseline = prepare(cantilever(), "LL")
+        self.assertFalse(baseline["warnings"])
+        for key in ("Ay", "Az", "Avy", "Avz"):
+            with self.subTest(key=key):
+                model = cantilever()
+                model["units"]["shearArea"] = "mm2"
+                model["sections"][0][key] = 12000
+                prepared = prepare(model, "LL")
+                self.assertEqual(prepared["elements"][0]["properties"], baseline["elements"][0]["properties"])
+                self.assertEqual(len(prepared["warnings"]), 1)
+                self.assertIn("does not use shear areas", prepared["warnings"][0])
+                for invalid in (0, -1, True, "12000", float("inf")):
+                    model["sections"][0][key] = invalid
+                    with self.assertRaises(ModelError):
+                        prepare(model, "LL")
+                model["sections"][0][key] = 12000
+                model["units"]["shearArea"] = "m2"
+                with self.assertRaisesRegex(ModelError, "units.shearArea"):
+                    prepare(model, "LL")
+
+    def test_directional_springs_are_not_silently_treated_as_rigid_ends(self):
+        model = cantilever()
+        model["springs"] = [{"symbol": "S", "kr": None, "krY": "rigid", "krZ": "rigid", "kt": None}]
+        model["elements"][0]["endI"].update(condition="spring", springSymbol="S")
+        with self.assertRaisesRegex(ModelError, "only explicit rigid ends"):
+            prepare(model, "LL")
+
     def test_duplicate_keys_fail(self):
         with tempfile.TemporaryDirectory() as folder:
             path = Path(folder) / "bad.json"

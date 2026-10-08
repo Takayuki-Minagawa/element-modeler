@@ -83,9 +83,9 @@ mm-N 系の値を持ちます。
 | E、G | `N/mm2` |
 | 密度 | `kg/m3` |
 | A | `mm2` |
-| Ay、Az | `mm2` |
+| Ay、Az、Avy、Avz | `mm2` |
 | Iy、Iz、J | `mm4` |
-| 回転ばね kr | `N*mm/rad` |
+| 回転ばね kr、krY、krZ | `N*mm/rad` |
 | 並進ばね kt | `N/mm` |
 
 画面入力が N/m、N/m²、N·m の荷重だけは、従来どおりエクスポート時に
@@ -136,20 +136,42 @@ H形鋼（`shape: "hSection"`）では、`flangeThickness=tf`、`webThickness=tw
 
 `shearAreaRatioY` と `shearAreaRatioZ` は 0 より大きく 1 以下の小数で、
 それぞれ `Ay = A × shearAreaRatioY`、`Az = A × shearAreaRatioZ` を表します。
-未入力時は比率と `Ay` / `Az` を `null` とします。`propertySource` は
-`rectangle`、`hSection`、`boxSection`、または `explicit` です。明示された b/h、
-形状寸法、A/Iy/Iz/J、せん断面積比が不正な場合は読込を拒否します。
+CADに明示せん断面積 `Avy` / `Avz` がある場合、対応する `Ay` / `Az` は明示値を優先します。
+比率と明示値は元のまま併記し、どちらも未入力の方向では `Ay` / `Az` を `null` とします。
+`Avy` / `Ay` は local y 方向せん断力、`Avz` / `Az` は local z 方向せん断力に対する面積です。
+これは曲げの回転軸とは異なり、水平梁の鉛直曲げは `Iy` と local z 方向せん断に対応します。
+
+`propertySource` は従来どおり `A` / `Iy` / `Iz` / `J` ごとの算定経路を持つオブジェクトで、
+各値は `rectangle`、`hSection`、`boxSection`、または `explicit` です。
+CAD schema 14 の断面全体の申告由来 `propertySource` は別名 `declaredPropertySource`
+（`catalog` / `computed` / `manual` / `null`）で出力し、解析 v2 の既存オブジェクトを置換しません。
+任意の鋼材記号 `designation` もそのまま出力し、未入力は `null` とします。
+鋼材記号や申告由来から数値を推定・置換する処理は行いません。
+明示された b/h、形状寸法、A/Iy/Iz/J/Avy/Avz、せん断面積比が不正な場合は読込を拒否します。
 
 CSV の `sect_header` / `sect` 行では、従来列の後ろに `shape`、
 `flange_thickness_mm`、`web_thickness_mm`、`box_thickness_mm`、
 `shear_area_ratio_y`、`shear_area_ratio_z`、`Ay_mm2`、`Az_mm2` を出力します。
+さらに `designation`、`declared_property_source`、`Avy_mm2`、`Avz_mm2` を末尾に追加します。
 
 ## ばね
 
-使用ばねは `symbol`、`kr`、`kt`、`memo`、`isDefault` を持ちます。
-`kr` は材端回転ばねの基本値、`kt` は任意の並進剛性です。使用中ばねの
-`kr` が未定義の場合、`meta.warnings.undefinedSpringStiffness` が `true` と
-なり、対象記号を `undefinedSpringSymbols` に列挙します。
+使用ばねは `symbol`、`kr`、`krY`、`krZ`、`kt`、`memo`、`isDefault` を持ちます。
+`kr` は両曲げ方向に共通の材端回転ばね基本値です。`krY` は local y まわり
+（水平梁の鉛直曲げ）、`krZ` は local z まわり（水平梁の水平曲げ）の上書き値です。
+方向値が `null` の場合は `kr` にフォールバックします。出力JSON/CSVは明示値と `null` を
+保持するため、下流側でも `effectiveKrY = krY ?? kr`、`effectiveKrZ = krZ ?? kr` を適用してください。
+
+剛性欄は有限正数、`"pin"`（解放）、`"rigid"`（剛結）、`null`（未入力）を受け付けます。
+0や負数を解放・未入力の代用にはしません。両曲げ方向のいずれかがフォールバック後も
+未入力の場合、`meta.warnings.undefinedSpringStiffness` が `true` となり、対象記号を
+`undefinedSpringSymbols` に列挙して出力を停止します。
+
+`kt` は従来どおり任意の **並進剛性（N/mm）** です。ねじり剛性ではなく、`null` に
+ねじり剛結の意味はありません。ねじり回転ばねへの読み替えや単位換算は行わないでください。
+CSVでは既存 `spring` 列の末尾に `krY_N_mm_rad`、`krZ_N_mm_rad` を追加します。
+同梱OpenSees変換器は引き続き明示 `condition: rigid` のみ対応し、ばね値がすべて
+`"rigid"` の場合も `condition: spring` を自動変換せず停止します。
 
 ## 質量源と自重
 
@@ -202,7 +224,7 @@ CSV の `sect_header` / `sect` 行では、従来列の後ろに `shape`、
 
 - 元CADモデルの参照整合エラー
 - 線材要素が1件以上存在すること
-- 使用材料の E/G/density、使用ばねの kr、全荷重ケースの質量換算係数
+- 使用材料の E/G/density、使用ばねの両曲げ方向（krY/krZ を kr で補完）、全荷重ケースの質量換算係数
 - 各要素連結成分の支持条件が、並進3・回転3の剛体6自由度を拘束すること
 - 解析断面を参照できない要素がないこと
 
