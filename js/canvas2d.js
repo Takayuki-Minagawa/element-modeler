@@ -12,7 +12,7 @@ import {
   SUPPORT_COLOR,
 } from './element-style.js';
 import { offsetPolygonOutward } from './geometry-utils.js';
-import { isFixedSupport, braceDiagonals, resolveWallDisplayOffset } from './view-semantics.js';
+import { isFixedSupport, braceDiagonals, resolveWallDisplayOffset, beamStrongAxisEndCondition } from './view-semantics.js';
 import { roofSlopeArrow } from './roof-geometry.js';
 import { isSlopedSurfaceType, isWallSurfaceType } from './state.js';
 
@@ -29,6 +29,9 @@ const VBRACE_TRIANGLE_HEIGHT_PX = 14;
 // Support symbol size (screen px) and base-offset factor.
 const SUPPORT_SYMBOL_SIZE_PX = 12;
 const SUPPORT_BASE_FACTOR = 1.4;
+// Beam end circles stay legible while zooming and sit inside the member span.
+const BEAM_END_RADIUS_PX = 5;
+const BEAM_END_INSET_PX = 14;
 
 export class Canvas2D {
   constructor(canvasEl, state) {
@@ -349,6 +352,7 @@ export class Canvas2D {
   // of the members touching that node (used to fade nodes with their layer).
   _drawMembers(ctx, selectedColor, memberDefault) {
     const visibleNodeAlpha = new Map();
+    const endSymbols = [];
     for (const m of this.state.members) {
       if (!this.state.isMemberVisible(m, '2d')) continue;
       const layerStyle = this.state.getPlanLayerStyle(m.levelId);
@@ -370,7 +374,20 @@ export class Canvas2D {
       } else {
         this._drawMemberLine(ctx, m, n1, n2, isSelected, selectedColor);
       }
-      if (this.state.settings.showMemberEndSymbols) this._drawMemberEndSymbols(ctx, m, n1, n2, selectedColor);
+      if (this.state.settings.showMemberEndSymbols) endSymbols.push({ m, n1, n2, alpha });
+      ctx.restore();
+    }
+    // Draw above all member lines, including columns at shared endpoints.
+    const springsBySymbol = new Map(this.state.springCatalog.map(spring => [spring.symbol, spring]));
+    const background = cssVar('--canvas-bg');
+    for (const { m, n1, n2, alpha } of endSymbols) {
+      ctx.save();
+      ctx.globalAlpha *= alpha;
+      if (m.type === 'beam') {
+        this._drawBeamEndSymbols(ctx, m, n1, n2, selectedColor, springsBySymbol, background);
+      } else {
+        this._drawMemberEndSymbols(ctx, m, n1, n2, selectedColor);
+      }
       ctx.restore();
     }
     return visibleNodeAlpha;
@@ -497,6 +514,45 @@ export class Canvas2D {
     ctx.fillStyle = '#e5e7eb';
     ctx.fillText(label, x + 6, y - 3);
     ctx.restore();
+  }
+
+  _drawBeamEndSymbols(ctx, member, n1, n2, selectedColor, springsBySymbol, background) {
+    const p1 = this.worldToScreen(n1.x, n1.y);
+    const p2 = this.worldToScreen(n2.x, n2.y);
+    const length = Math.hypot(p2.x - p1.x, p2.y - p1.y);
+    if (length < 1) return;
+    const ux = (p2.x - p1.x) / length;
+    const uy = (p2.y - p1.y) / length;
+    // Shrink along with very short projected spans so neither end crosses the
+    // node or overlaps the opposite end, including sloped/explicit-3D beams.
+    const radius = Math.min(BEAM_END_RADIUS_PX, length / 8);
+    const inset = Math.min(BEAM_END_INSET_PX, length / 4);
+    ctx.strokeStyle = this._selectedMemberIds.has(member.id) ? selectedColor : resolveMemberColor(member);
+    ctx.fillStyle = background;
+    ctx.lineWidth = Math.min(1.5, radius / 3);
+    ctx.setLineDash([]);
+    const draw = (point, end, direction) => {
+      const condition = beamStrongAxisEndCondition(end, springsBySymbol.get(end?.springSymbol));
+      if (condition === 'rigid') return;
+      const x = point.x + direction * inset * ux;
+      const y = point.y + direction * inset * uy;
+      ctx.beginPath();
+      ctx.arc(x, y, radius, 0, Math.PI * 2);
+      // Mask the underlying line even on halftone floors; only the outline
+      // inherits the layer opacity, keeping the circle genuinely hollow.
+      ctx.save();
+      ctx.globalAlpha = 1;
+      ctx.fill();
+      ctx.restore();
+      ctx.stroke();
+      if (condition === 'spring') {
+        ctx.beginPath();
+        ctx.arc(x, y, radius * 0.5, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+    };
+    draw(p1, member.endI, 1);
+    draw(p2, member.endJ, -1);
   }
 
   _drawMemberEndSymbols(ctx, member, n1, n2, selectedColor) {

@@ -32,7 +32,7 @@ export function createDefaultSettings() {
     showMembers: true,
     showSurfaces: true,
     showLoads: true,
-    showMemberEndSymbols: false,
+    showMemberEndSymbols: true,
     showPlacementLabels: true,
     memberTypeFilter: 'all',
     sectionFilter: 'all',

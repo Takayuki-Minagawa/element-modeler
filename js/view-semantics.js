@@ -3,6 +3,16 @@
 // support, a V-brace or a wall offset should be read from the model data.
 
 import { WALL_DISPLAY_OFFSET_MM } from './constants.js';
+import { resolveSpringStiffness } from './section-catalog.js';
+
+// The model uses local y for strong-axis bending. Directional spring values
+// override the common kr; an unspecified spring still displays as a spring.
+export function beamStrongAxisEndCondition(end, spring) {
+  if (end?.condition === 'rigid') return 'rigid';
+  if (end?.condition !== 'spring') return 'pin';
+  const stiffness = resolveSpringStiffness(spring).krY;
+  return stiffness === 'pin' || stiffness === 'rigid' ? stiffness : 'spring';
+}
 
 // A support is drawn as "fixed" only when every translational and every
 // rotational DOF is restrained. Any free DOF reads as a roller / partial
