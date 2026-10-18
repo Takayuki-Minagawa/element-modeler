@@ -1,3 +1,5 @@
+import { validateExchange } from '../analysis/exchange.js';
+
 // Internal history snapshots deliberately bypass CAD serialization: CAD files
 // omit unused definitions and merge catalogs on load; undo must do neither.
 // Private indexes/caches are derived data, never snapshot payload. The state
@@ -25,6 +27,7 @@ export function restoreSnapshot(state, snapshot, { rollback = false } = {}) {
   }
   // Finish cloning before touching live state or the history stacks.
   const data = structuredClone(snapshot.data);
+  data.analysisExchange = (data.analysisExchange === null || data.analysisExchange === undefined) ? null : validateExchange(data.analysisExchange);
   for (const key of Object.keys(data)) if (isDerived(key)) delete data[key];
   if (!rollback) data.revision = state.revision + 1;
   const restored = Object.assign(Object.create(Object.getPrototypeOf(state)), data);

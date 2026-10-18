@@ -4,6 +4,7 @@
 
 import { DEFAULT_ROOF_GROUP_ID, DEFAULT_SECTION_B_MM, DEFAULT_SECTION_H_MM } from './constants.js';
 import { normalizeAnalysisSettings } from './analysis-settings.js';
+import { validateExchange } from './analysis/exchange.js';
 import { normalizeSettings } from './display-settings.js';
 import { positiveNumber as sanitizePositiveNumber } from './geometry-utils.js';
 import {
@@ -34,7 +35,7 @@ function sanitizeText(value) {
   return typeof value === 'string' ? value.trim() : '';
 }
 
-export const CURRENT_SCHEMA_VERSION = 15;
+export const CURRENT_SCHEMA_VERSION = 16;
 const SUPPORTED_SCHEMA_VERSIONS = new Set(
   Array.from({ length: CURRENT_SCHEMA_VERSION }, (_, index) => index + 1)
 );
@@ -89,6 +90,7 @@ export function serializeModel(state) {
       ...state.analysisSettings,
       massSources: { ...state.analysisSettings.massSources },
     },
+    analysisExchange: (state.analysisExchange === null || state.analysisExchange === undefined) ? null : validateExchange(state.analysisExchange),
     underlay: state.underlay
       ? { name: state.underlay.name, entities: structuredClone(state.underlay.entities) }
       : null,
@@ -170,7 +172,11 @@ export function loadModelJSON(state, data) {
   if (!data || !isSupportedSchemaVersion(version)) {
     throw new Error('Unsupported schema version');
   }
+  // Validate before mutating the live state, including the direct loadJSON API.
+  // Older CAD files deliberately clear any previously associated original.
+  const analysisExchange = (data.analysisExchange === null || data.analysisExchange === undefined) ? null : validateExchange(data.analysisExchange);
   state.schemaVersion = CURRENT_SCHEMA_VERSION;
+  state.analysisExchange = analysisExchange;
   state.meta = { ...data.meta };
   state.settings = normalizeSettings(data.settings);
   state.levels = Array.isArray(data.levels) && data.levels.length > 0

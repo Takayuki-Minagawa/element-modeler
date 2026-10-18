@@ -50,6 +50,7 @@ import { applyModelImport } from './persistence/model-import.js';
 import { focusIssue } from './ui/focus-issue.js';
 import { mountViewerTools } from './render/viewer-tools.js';
 import { initAnalysisWorkbench } from './analysis/workbench.js';
+import { initAnalysisExchangePanel } from './analysis/exchange-panel.js';
 
 // --- Initialize ---
 
@@ -72,6 +73,7 @@ let viewerTools = null;
 let viewerToolsState = null;
 let recoveryUI = null;
 let analysisWorkbench = null;
+let analysisExchangePanel = null;
 let workspace = null;
 let planNavigation = null;
 
@@ -127,6 +129,7 @@ function update() {
   ui.updateZoom(canvas2d.camera.scale);
   recoveryUI?.applyLanguage();
   analysisWorkbench?.refresh();
+  analysisExchangePanel?.modelChanged();
   workspace?.requestRefresh();
 }
 
@@ -664,6 +667,10 @@ analysisWorkbench = initAnalysisWorkbench({
   },
 });
 
+analysisExchangePanel = initAnalysisExchangePanel({
+  state, history, host: document.getElementById('analysis-tools'), onModelChange: update,
+});
+
 // --- Autosave / crash recovery ---
 
 const recoveryStartupRevision = state.revision;
@@ -738,6 +745,7 @@ function applyLang(lang) {
   analysisSettingsModal.applyLanguage();
   layerModal.clearFormError();
   analysisWorkbench?.applyLanguage();
+  analysisExchangePanel?.applyLanguage();
   if (viewer3d) {
     viewerTools?.dispose();
     viewerTools = mountViewerTools(document.getElementById('viewer-tools'), viewer3d, {

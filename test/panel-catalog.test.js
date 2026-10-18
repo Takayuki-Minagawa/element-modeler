@@ -96,7 +96,7 @@ test('surface-only spring references survive CAD and recovery and protect spring
   assert.equal(state.removeSpring('UnusedKv'), true);
   state.addSpring({ symbol: 'UnusedKv', kv: 'pin' });
   const saved = state.toJSON();
-  assert.equal(saved.schemaVersion, 15);
+  assert.equal(saved.schemaVersion, 16);
   assert.deepEqual(saved.springCatalog.map(s => s.symbol), ['_SP', 'PanelKr', 'JointKv', 'BeamKv']);
   for (const data of [saved, captureRecoveryData(state)]) {
     const restored = new AppState();
@@ -123,7 +123,7 @@ test('schema 14 data gains only unspecified panel/kv fields; invalid declaration
   }
   const state = new AppState();
   applyModelImport(legacy, state);
-  assert.equal(state.schemaVersion, 15);
+  assert.equal(state.schemaVersion, 16);
   const surface = state.getSection('surface', 'floor', '_S');
   assert.equal(surface.panelDirection, null);
   assert.equal(surface.endRotationalSpring, null);

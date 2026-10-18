@@ -141,6 +141,7 @@ export class AppState {
     this.axes = [];
     this.loadCombinations = createDefaultLoadCombinations();
     this.analysisSettings = createDefaultAnalysisSettings();
+    this.analysisExchange = null;
     // Optional imported drawing underlay ({ name, entities }) shown beneath
     // the plan; not part of the structural model.
     this.underlay = null;

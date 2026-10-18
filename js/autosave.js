@@ -36,6 +36,7 @@ function settingsEdited(raw) {
 // (settings are part of the saved model too). Exported for tests.
 export function modelHasContent(data) {
   if (!data) return false;
+  if (data.analysisExchange !== null && data.analysisExchange !== undefined) return true;
   const count =
     (data.nodes?.length || 0) +
     (data.members?.length || 0) +
