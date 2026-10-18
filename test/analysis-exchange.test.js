@@ -22,7 +22,7 @@ function nativeModel() {
       elements: [
         { type: 'zeroLengthSpring2D', tag: 900, node_i: 1, node_j: 101, kx: 0, ky: 2e8, kr: 0 },
         { type: 'elasticBeamColumn2D', tag: 1, node_i: 101, node_j: 2,
-          area: 0.02, elastic_modulus: 1e10, inertia: 0.0001, release_i: [false, false, true] },
+          area: 0.02, elastic_modulus: 1e10, inertia: 0.0001, releases: ['rz_i'] },
       ],
       supports: [{ node_tag: 1, fixity: [true, true, true] }],
       nodal_masses: [{ node_tag: 2, mass: [100, 100, 0] }],

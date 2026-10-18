@@ -18,8 +18,8 @@ const original = {
   },
   load_cases: [
     { name: 'G', element_loads: [{ type: 'beamUniform', element_tag: 12, wy: -1000, wx: 0, wz: 0 }] },
-    { name: 'Q_residential', nodal_loads: [{ node_tag: 2, values: [0, -1300, 0] }] },
-    { name: 'E+', nodal_loads: [{ node_tag: 2, values: [100, 0, 0] }] },
+    { name: 'Q_residential', nodal_loads: [{ node_tag: 2, fx: 0, fy: -1300, mz: 0 }] },
+    { name: 'E+', nodal_loads: [{ node_tag: 2, fx: 100, fy: 0, mz: 0 }] },
   ],
   load_combinations: [{ name: 'custom-signed', factors: { G: 1, Q_residential: 0.7, 'E+': -1 } }],
   metadata: { preserved: { note: '<b>original</b>', array: [1, false, null] } },
