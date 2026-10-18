@@ -4,6 +4,9 @@
 下流の床振動解析 adapter へ渡すための交換形式です。JSON と CSV は同じ
 mm-N 系の値を持ちます。
 
+解析原本の関連保存・無損失再出力は、専用の[解析交換v1 / CAD schema 16](analysis-exchange-v1.md)
+で扱います。このv2形式の生成や単位変換の規則は変更しません。
+
 ## 識別と責務境界
 
 - ファイル名は従来どおり `<model>_analysis_<timestamp>.json|csv` です。
