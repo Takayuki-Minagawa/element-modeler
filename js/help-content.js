@@ -29,7 +29,7 @@ export const helpContentJa = `
   <tr><td><b>荷重作成</b></td><td>「荷重」ツール(Lキー)。面荷重は矩形2点、線荷重は線分2点、点荷重は1点クリック</td></tr>
   <tr><td><b>支点配置</b></td><td>「支点」ツール(Sキー)でキャンバス上をクリック。プロパティパネルで6自由度(DX/DY/DZ/RX/RY/RZ)を設定</td></tr>
   <tr><td><b>選択</b></td><td>「要素」ツール(Vキー)で線材・面材・荷重・支点をクリック。3D表示でも部材・面材をクリックで選択できます</td></tr>
-  <tr><td><b>複数選択</b></td><td>Shift+クリックで線材を追加/解除。空白からドラッグで矩形範囲選択。右パネルで一括断面変更・ミラー・回転・配列複製・一括削除</td></tr>
+  <tr><td><b>複数選択</b></td><td>Shift+クリックで線材を追加/解除。空白から左→右へドラッグすると、青い実線枠に全体が入った線材を選択。右→左は緑の破線枠に触れる・交差する線材も選択します。Shift+ドラッグで追加、Escで範囲選択を中止。非表示や他レイヤー選択ロック中の線材は対象外です。右パネルで一括断面変更・ミラー・回転・配列複製・一括削除</td></tr>
   <tr><td><b>線材の連結</b></td><td>一直線に連続する梁、または上下に連続する柱を2本以上選び、右パネルの「連結」をクリック。断面が異なる場合は連結後の断面を選択</td></tr>
   <tr><td><b>線材の分割</b></td><td>梁または柱を1本選び、右パネルの「分割」をクリック。梁は部材上の分割点をクリック（Escでキャンセル）、柱は中間レイヤーを選択</td></tr>
   <tr><td><b>計測</b></td><td>「計測」ツール(Dキー)で2点をクリックすると距離・dX・dYを表示。Escで消去</td></tr>
@@ -192,7 +192,7 @@ export const helpContentEn = `
   <tr><td><b>Create load</b></td><td>Use "Load" (L). Area load: 2-point rectangle. Line load: 2-point line. Point load: single click</td></tr>
   <tr><td><b>Place support</b></td><td>Use "Support" (S). Click to place. Edit 6 DOFs (DX/DY/DZ/RX/RY/RZ) in the property panel</td></tr>
   <tr><td><b>Select</b></td><td>Use "Element" tool (V key), click a line/surface/load/support element. Members and surfaces can also be picked by clicking in the 3D view</td></tr>
-  <tr><td><b>Multi-select</b></td><td>Shift+click toggles members; drag from empty space for a marquee selection. The panel offers batch section change, mirror, rotate, array copy, and batch delete</td></tr>
+  <tr><td><b>Multi-select</b></td><td>Shift+click toggles members. Drag from empty space left to right for a blue solid window selecting fully enclosed members; drag right to left for a green dashed crossing window that also selects members touching or crossing its border. Shift+drag adds to the selection; Esc cancels the rectangle. Hidden members and members locked on other layers are excluded. The panel offers batch section change, mirror, rotate, array copy, and batch delete</td></tr>
   <tr><td><b>Join members</b></td><td>Select two or more collinear connected beams, or vertically adjacent columns, then click "Join" in the right panel. If their sections differ, select the section for the joined member</td></tr>
   <tr><td><b>Split member</b></td><td>Select one beam or column and click "Split" in the right panel. For a beam, click the split point on the member (Esc cancels); for a column, select an intermediate level</td></tr>
   <tr><td><b>Measure</b></td><td>Use "Measure" (D). Click two points to show length, dX, and dY. Esc clears</td></tr>

@@ -3,6 +3,7 @@
 import { drawGrid } from './grid.js';
 import { FrameScheduler } from './render/frame-scheduler.js';
 import { clampPlanScale } from './plan-camera.js';
+import { marqueeSelectionMode } from './domain/marquee-selection.js';
 import { RenderIndex, selectedElements, displayStamp } from './render/model-index.js';
 import { cssVar } from './dom-utils.js';
 import {
@@ -298,15 +299,17 @@ export class Canvas2D {
     ctx.restore();
   }
 
-  _drawMarquee(ctx, previewColor) {
+  _drawMarquee(ctx) {
     if (!this.marquee) return;
     const p1 = this.worldToScreen(this.marquee.x1, this.marquee.y1);
     const p2 = this.worldToScreen(this.marquee.x2, this.marquee.y2);
+    const crossing = marqueeSelectionMode(this.marquee) === 'crossing';
+    const color = crossing ? '#22c55e' : '#3b82f6';
     ctx.save();
-    ctx.strokeStyle = previewColor;
-    ctx.fillStyle = toRgba(previewColor, 0.08);
+    ctx.strokeStyle = color;
+    ctx.fillStyle = toRgba(color, 0.08);
     ctx.lineWidth = 1;
-    ctx.setLineDash([5, 3]);
+    ctx.setLineDash(crossing ? [5, 3] : []);
     ctx.beginPath();
     ctx.rect(
       Math.min(p1.x, p2.x),

@@ -1,4 +1,5 @@
 import { createDiagnostic } from './domain/diagnostics.js';
+import { planNearbyNodeMerge } from './domain/node-merge.js';
 // model-ops.js - Cross-cutting model operations (validation, level copy,
 // node merge, member split and copy transforms) extracted from state.js.
 // Functions take the AppState instance as their first argument; AppState
@@ -239,24 +240,11 @@ export function copyLevelElements(state, sourceLevelId, targetLevelId, options =
 
 // --- Node merge -------------------------------------------------------------
 
-// Merges nodes that lie within `tolerance` (mm) of each other. The node with
-// the smallest id in a cluster survives; members are re-pointed to it.
+// Merges nodes within `tolerance` (mm) of a surviving, lower-ID node.
+// Proximity is not transitive; members are re-pointed to the survivor.
 export function mergeNearbyNodes(state, options = {}) {
   const tolerance = positiveNumber(options.tolerance, NODE_MERGE_TOLERANCE_MM);
-  const nodes = [...state.nodes].sort((a, b) => a.id - b.id);
-  const remap = new Map();
-
-  for (let i = 0; i < nodes.length; i++) {
-    const target = nodes[i];
-    if (remap.has(target.id)) continue;
-    for (let j = i + 1; j < nodes.length; j++) {
-      const other = nodes[j];
-      if (remap.has(other.id)) continue;
-      if (Math.hypot(other.x - target.x, other.y - target.y) <= tolerance) {
-        remap.set(other.id, target.id);
-      }
-    }
-  }
+  const remap = planNearbyNodeMerge(state.nodes, tolerance);
 
   if (!remap.size) return { mergedNodes: 0 };
 

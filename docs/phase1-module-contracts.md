@@ -10,6 +10,8 @@
 - `section-catalog.js`: catalog definitions and normalization. State applies section changes to model elements. `ui/user-def/` owns user-definition editing.
 - `model-ops.js` / `roof-generation.js`: model operations receive state explicitly and import shared helpers from the domain layer. None of the three modules above imports AppState.
 - `domain/id-index.js`: lazily built ID maps with array identity/length and entry-position checks. Public mutations invalidate through `_touch()`. Array replacement, append, splice and direct ID edits fall back to lookup/rebuild as needed. `state.invalidateDerivedCaches()` resets `_idIndexes`; `persistence/snapshot.js` excludes derived caches and invokes this hook on restoration.
+- `domain/node-merge.js`: pure nearby-node remap planning with spatial buckets and an exact distance check. Retains the original numeric-ID order and non-transitive greedy merge rule; unsafe grid inputs use the original scan. `model-ops.js` applies the resulting remap and owns the model revision update.
+- `domain/marquee-selection.js`: shared drag-direction and inclusive segment/rectangle predicates. Uses existing member selectability rules without changing model, selection or history. The selection tool applies returned IDs; the canvas uses the same direction rule for the blue solid window and green dashed crossing preview.
 
 Runtime selection, draft settings, previews and camera movement do not belong in CAD files. Exact history snapshots and their restoration are owned by `persistence/snapshot.js` and `History`; this change does not modify AppState's snapshot methods. History retains unused definitions and runtime data separately from CAD serialization.
 

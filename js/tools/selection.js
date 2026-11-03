@@ -1,6 +1,7 @@
 import { beginDrag, finishDrag, previewNode } from './drag-edit.js';
 
 import { applySnap } from '../grid.js';
+import { memberIdsInMarquee } from '../domain/marquee-selection.js';
 
 // ToolManager delegates to these cohesive behaviors; this is the existing host.
 export const selectionTool = {
@@ -216,20 +217,9 @@ export const selectionTool = {
       return;
     }
 
-    const minX = Math.min(start.x, world.x);
-    const maxX = Math.max(start.x, world.x);
-    const minY = Math.min(start.y, world.y);
-    const maxY = Math.max(start.y, world.y);
-    const inside = (x, y) => x >= minX && x <= maxX && y >= minY && y <= maxY;
-
-    const hitIds = [];
-    for (const member of this.state.members) {
-      if (!this.state.isMemberSelectable(member)) continue;
-      const n1 = this.state.getNode(member.startNodeId);
-      const n2 = this.state.getNode(member.endNodeId);
-      if (!n1 || !n2) continue;
-      if (inside(n1.x, n1.y) && inside(n2.x, n2.y)) hitIds.push(member.id);
-    }
+    const hitIds = memberIdsInMarquee(this.state, {
+      x1: start.x, y1: start.y, x2: world.x, y2: world.y,
+    });
 
     const ids = this._marqueeAdditive
       ? [...new Set([...this.state.selectedMemberIds, ...hitIds])]
