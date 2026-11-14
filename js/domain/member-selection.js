@@ -18,17 +18,8 @@ export function invertedMemberIds(members, selectedIds, isSelectable) {
     .map(member => member.id);
 }
 
-// Plan nodes are shared by every level, so connectivity is keyed by the node
-// id together with the elevation of each member end. A column therefore links
-// the beams at its base level with those at its top level, but two beams on
-// different floors that merely share a plan node stay apart.
-export function memberEndpointKey(nodeId, z) {
-  const elevation = Number(z);
-  const rounded = Number.isFinite(elevation) ? Math.round(elevation * 1000) / 1000 : 'NaN';
-  return `${nodeId}|${rounded === 0 ? 0 : rounded}`;
-}
-
-// endpointKeys(member) returns every connection key of one member. Walking is
+// endpointKeys(member) returns every connection key of one member (callers
+// decide what makes two ends the same point). Walking is
 // limited to selectable members, so hidden or locked members neither join the
 // result nor bridge two otherwise separate groups.
 export function connectedMemberIds(members, seedIds, { isSelectable, endpointKeys }) {

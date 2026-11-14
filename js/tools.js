@@ -426,7 +426,7 @@ export class ToolManager {
         // Plan only: the 3D tab keeps the browser's default behaviour.
         if (this.canvas2d?.canvas?.hidden) return;
         e.preventDefault();
-        this.runMemberSelectionCommand('all');
+        this.runMemberSelectionCommand('all', { source: 'shortcut' });
       } else if (key === 'z' && !e.shiftKey) {
         e.preventDefault();
         this.restoreHistory('undo');
@@ -500,13 +500,16 @@ export class ToolManager {
     return changed;
   }
 
-  // Select all / invert / connected members. Ends any drag or marquee first so
-  // its mouseup cannot overwrite the new selection.
-  runMemberSelectionCommand(command) {
+  // Select all / invert / connected members. Ends any drag, marquee or armed
+  // split point first so neither can act on or overwrite the new selection.
+  runMemberSelectionCommand(command, { source = 'menu' } = {}) {
     this.cancelDrag();
     const result = applyMemberSelectionCommand(this.state, command);
-    if (result.ok) this.onUpdate();
-    this.callbacks.onMemberSelectionCommand?.(command, result);
+    if (result.ok) {
+      this.cancelSplitPoint({ update: false });
+      this.onUpdate();
+    }
+    this.callbacks.onMemberSelectionCommand?.(command, result, source);
     return result;
   }
 

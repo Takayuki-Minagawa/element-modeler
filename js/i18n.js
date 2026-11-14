@@ -719,7 +719,7 @@ const dict = {
     menuSelectAll: 'Select all visible members',
     menuSelectInvert: 'Invert member selection',
     menuSelectConnected: 'Select connected members',
-    selectionMembersDone: 'Selected {n} members.',
+    selectionMembersDone: 'Members selected: {n}.',
     selectionNeedsMember: 'Select a member to start from.',
     selectionNoMembers: 'No members can be selected. Check the display filters and layer lock.',
     menuConnections: 'Member connections',

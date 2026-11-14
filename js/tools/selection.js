@@ -2,9 +2,8 @@ import { beginDrag, finishDrag, previewNode } from './drag-edit.js';
 
 import { applySnap } from '../grid.js';
 import { memberIdsInMarquee } from '../domain/marquee-selection.js';
-import {
-  allSelectableMemberIds, connectedMemberIds, invertedMemberIds, memberEndpointKey,
-} from '../domain/member-selection.js';
+import { allSelectableMemberIds, connectedMemberIds, invertedMemberIds } from '../domain/member-selection.js';
+import { createNodePool } from '../analysis-export.js';
 import { resolveMemberEndZ } from '../quantities.js';
 
 export const MEMBER_SELECTION_COMMANDS = Object.freeze(['all', 'invert', 'connected']);
@@ -14,14 +13,24 @@ function currentMemberIds(state) {
   return state.selectedMemberId ? [state.selectedMemberId] : [];
 }
 
-// Connection keys follow the analysis export: each end sits at its plan node
-// and resolved elevation; a cross brace also links its mirrored diagonal.
-function memberEndpointKeys(state, member) {
-  const startZ = resolveMemberEndZ(state, member, 'start');
-  const endZ = resolveMemberEndZ(state, member, 'end');
-  const keys = [memberEndpointKey(member.startNodeId, startZ), memberEndpointKey(member.endNodeId, endZ)];
-  if (member.type === 'vbrace' && member.bracePattern === 'cross') {
-    keys.push(memberEndpointKey(member.endNodeId, startZ), memberEndpointKey(member.startNodeId, endZ));
+// Connection keys match the analysis export: plan nodes are shared by every
+// level and the app also creates distinct nodes at one point (level copy,
+// rotate/mirror, samples), so ends are merged by 3D position within the
+// export's tolerance. A cross brace also links its mirrored diagonal.
+function memberEndpointKeyMap(state) {
+  const pool = createNodePool();
+  const keys = new Map();
+  for (const member of state.members) {
+    const n1 = state.getNode(member.startNodeId);
+    const n2 = state.getNode(member.endNodeId);
+    if (!n1 || !n2) continue;
+    const startZ = resolveMemberEndZ(state, member, 'start');
+    const endZ = resolveMemberEndZ(state, member, 'end');
+    const ids = [pool.idFor(n1.x, n1.y, startZ), pool.idFor(n2.x, n2.y, endZ)];
+    if (member.type === 'vbrace' && member.bracePattern === 'cross') {
+      ids.push(pool.idFor(n2.x, n2.y, startZ), pool.idFor(n1.x, n1.y, endZ));
+    }
+    keys.set(member.id, ids);
   }
   return keys;
 }
@@ -45,8 +54,9 @@ export function applyMemberSelectionCommand(state, command) {
       return member && isSelectable(member);
     });
     if (!seeds.length) return { ok: false, reason: 'noMemberSelected' };
+    const keys = memberEndpointKeyMap(state);
     ids = connectedMemberIds(state.members, seeds, {
-      isSelectable, endpointKeys: member => memberEndpointKeys(state, member),
+      isSelectable, endpointKeys: member => keys.get(member.id) || [],
     });
   }
   return { ok: true, ids: state.selectMembers(ids) };

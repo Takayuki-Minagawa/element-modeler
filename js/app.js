@@ -350,19 +350,25 @@ toolManager = new ToolManager(canvas2d, state, history, update, {
   onSplitPointFailed() {
     showNotice(t('splitMemberFailed'), 'error');
   },
-  onMemberSelectionCommand(command, result) {
+  onMemberSelectionCommand(command, result, source) {
     if (!result.ok) {
       if (result.reason !== 'unknown') showNotice(t(result.reason === 'noMemberSelected' ? 'selectionNeedsMember' : 'selectionNoMembers'), 'error');
       return;
     }
     // Ctrl+A stays quiet; the menu commands report the resulting count.
-    if (command !== 'all') showNotice(t('selectionMembersDone', { n: result.ids.length }), 'success');
+    if (source !== 'shortcut') showNotice(t('selectionMembersDone', { n: result.ids.length }), 'success');
   },
 });
 
-document.querySelectorAll('[data-member-selection]').forEach(button => {
+const memberSelectionButtons = [...document.querySelectorAll('[data-member-selection]')];
+memberSelectionButtons.forEach(button => {
   button.addEventListener('click', () => toolManager.runMemberSelectionCommand(button.dataset.memberSelection));
 });
+// The commands follow plan visibility and layer locks, so they are only
+// offered while the plan is shown.
+function setMemberSelectionAvailable(available) {
+  for (const button of memberSelectionButtons) button.disabled = !available;
+}
 
 planNavigation = initPlanNavigation({ state, canvas2d, toolManager, onUpdate: update });
 
@@ -383,6 +389,7 @@ const tab3d = document.getElementById('tab-3d');
 
 function activatePlanInput() {
   activeView = '2d';
+  setMemberSelectionAvailable(true);
   tab2d.classList.add('active');
   tab3d.classList.remove('active');
   tab2d.setAttribute('aria-pressed', 'true');
@@ -404,6 +411,7 @@ tab2d.addEventListener('click', activatePlanInput);
 
 tab3d.addEventListener('click', async () => {
   activeView = '3d';
+  setMemberSelectionAvailable(false);
   tab3d.classList.add('active');
   tab2d.classList.remove('active');
   tab2d.setAttribute('aria-pressed', 'false');

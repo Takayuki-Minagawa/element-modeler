@@ -1,8 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {
-  allSelectableMemberIds, connectedMemberIds, invertedMemberIds, memberEndpointKey,
-} from '../js/domain/member-selection.js';
+import { allSelectableMemberIds, connectedMemberIds, invertedMemberIds } from '../js/domain/member-selection.js';
+import { buildSampleModel } from '../js/samples.js';
+import { AppState } from '../js/state.js';
 import { applyMemberSelectionCommand } from '../js/tools/selection.js';
 import { toolHarness } from './helpers/ui-harness.js';
 
@@ -24,11 +24,34 @@ test('pure rules: all, invert and connected walk only selectable members', () =>
   assert.deepEqual(allSelectableMemberIds(null, always), []);
 });
 
-test('endpoint keys normalize elevation rounding and negative zero', () => {
-  assert.equal(memberEndpointKey(5, 3000.0000001), memberEndpointKey(5, 3000));
-  assert.equal(memberEndpointKey(5, -0), memberEndpointKey(5, 0));
-  assert.notEqual(memberEndpointKey(5, 0), memberEndpointKey(5, 3000));
-  assert.notEqual(memberEndpointKey(5, 0), memberEndpointKey(6, 0));
+test('distinct node IDs at one position connect, as in the analysis export (sample and level copy)', () => {
+  const state = new AppState();
+  state.loadJSON(buildSampleModel('twoStoryFrame'));
+  state.settings.planLayerDisplayMode = 'all';
+  state.settings.planLayerSelectionLock = false;
+  const columns = state.members.filter(member => member.type === 'column');
+  assert.ok(columns.length >= 2);
+  for (const column of columns) {
+    state.select('member', column.id);
+    assert.equal(applyMemberSelectionCommand(state, 'connected').ids.length, state.members.length, column.id);
+  }
+
+  const { state: copied } = toolHarness();
+  copied.levels.push({ id: 'L2', name: '3F', z: 6000 });
+  copied.settings.planLayerDisplayMode = 'all';
+  const a = copied.addNode(0, 0), b = copied.addNode(5000, 0);
+  const column = copied.addMember(a.id, a.id, { type: 'column', levelId: 'L0', topLevelId: 'L1' });
+  copied.addMember(a.id, b.id, { type: 'beam', levelId: 'L1' });
+  // Same position, different node IDs, and an end 0.05 mm away still joins.
+  const a2 = copied.addNode(0, 0), c = copied.addNode(0.05, 0), d = copied.addNode(0, 4000);
+  const beam = copied.addMember(a2.id, d.id, { type: 'beam', levelId: 'L1' });
+  const near = copied.addMember(c.id, b.id, { type: 'beam', levelId: 'L0' });
+  const far = copied.addNode(0.2, 0);
+  const apart = copied.addMember(far.id, d.id, { type: 'beam', levelId: 'L0' });
+  copied.select('member', column.id);
+  const ids = applyMemberSelectionCommand(copied, 'connected').ids;
+  assert.ok(ids.includes(beam.id) && ids.includes(near.id));
+  assert.ok(!ids.includes(apart.id));
 });
 
 function frame() {
@@ -112,7 +135,7 @@ test('select all and invert honor layer lock; commands never touch model, revisi
 test('commands report why the selection is kept', () => {
   const { state, manager, members: m } = frame();
   const reports = [];
-  manager.callbacks = { onMemberSelectionCommand: (command, result) => reports.push([command, result]) };
+  manager.callbacks = { onMemberSelectionCommand: (...args) => reports.push(args) };
   let updates = 0;
   manager.onUpdate = () => { updates++; };
   state.select('surface', 'any');
@@ -128,13 +151,32 @@ test('commands report why the selection is kept', () => {
   assert.equal(state.selectedMemberId, m.beam0.id);
   assert.deepEqual(applyMemberSelectionCommand(state, 'bogus'), { ok: false, reason: 'unknown' });
   assert.equal(updates, 1);
-  assert.deepEqual(reports.map(([command, result]) => [command, result.ok]),
-    [['connected', false], ['invert', true], ['all', false], ['invert', false], ['connected', false]]);
+  assert.deepEqual(reports.map(([command, result, source]) => [command, result.ok, source]),
+    [['connected', false, 'menu'], ['invert', true, 'menu'], ['all', false, 'menu'], ['invert', false, 'menu'], ['connected', false, 'menu']]);
+});
+
+test('a successful command disarms split-point mode; a failed one keeps it', () => {
+  const { state, manager, members: m } = frame();
+  manager.callbacks = {};
+  state.select('member', m.beam0.id);
+  manager._splitPointMemberId = m.beam0.id;
+  manager._splitPointPreviousTool = 'select';
+  state.currentTool = 'splitPoint';
+  state.settings.showMembers = false;
+  manager.runMemberSelectionCommand('all');
+  assert.equal(state.currentTool, 'splitPoint');
+  state.settings.showMembers = true;
+  manager.runMemberSelectionCommand('connected');
+  assert.equal(state.currentTool, 'select');
+  assert.equal(manager._splitPointMemberId, null);
+  assert.ok(state.selectedMemberIds.length > 1);
 });
 
 test('Ctrl/Cmd+A selects all in the plan view only and leaves blocked targets alone', () => {
   const { state, manager, members: m } = frame();
   manager.canvas2d.canvas = { hidden: false };
+  const sources = [];
+  manager.callbacks = { onMemberSelectionCommand: (command, result, source) => sources.push(source) };
   const press = (props = {}) => {
     const event = { key: 'a', ctrlKey: true, metaKey: false, shiftKey: false, altKey: false, target: null,
       defaultPrevented: false, preventDefault() { this.defaultPrevented = true; this.prevented = true; }, ...props };
@@ -153,4 +195,5 @@ test('Ctrl/Cmd+A selects all in the plan view only and leaves blocked targets al
   manager.canvas2d.canvas.hidden = true;
   assert.equal(press().prevented, undefined);
   assert.deepEqual(state.selectedMemberIds, []);
+  assert.deepEqual(sources, ['shortcut', 'shortcut']);
 });

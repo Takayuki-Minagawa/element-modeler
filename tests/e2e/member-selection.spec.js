@@ -100,6 +100,14 @@ test('select all skips locked layers and leaves form controls and the 3D tab alo
   await page.locator('body').focus();
   await page.keyboard.press('ControlOrMeta+a');
   expect(await selected(page)).toEqual([]);
+  await page.locator('#menu-edit-trigger').click();
+  for (const command of ['all', 'invert', 'connected']) {
+    await expect(page.locator(`[data-member-selection="${command}"]`)).toBeDisabled();
+  }
+  await page.keyboard.press('Escape');
+  await page.locator('#tab-2d').click();
+  await page.locator('#menu-edit-trigger').click();
+  await expect(page.locator('[data-member-selection="all"]')).toBeEnabled();
 });
 
 test('connected selection asks for a member when none is selected', async ({ page }) => {

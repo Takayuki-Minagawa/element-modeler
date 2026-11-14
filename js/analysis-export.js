@@ -28,7 +28,7 @@ export const NODE_MERGE_TOLERANCE = 0.1;
 // with cell size = tolerance keeps lookups O(1). Rounded cell indices can put
 // points within tolerance up to two cells apart in an axis, so the lookup
 // scans the full 5x5x5 neighborhood.
-function createNodePool(tolerance) {
+export function createNodePool(tolerance = NODE_MERGE_TOLERANCE) {
   const nodes = [];
   const cells = new Map();
   const cellIndex = v => Math.round(v / tolerance);
