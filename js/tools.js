@@ -1,7 +1,7 @@
 import { blocksCadShortcut } from './keyboard.js';
 import { executeModelCommand } from './commands/model-command.js';
 import { finishDrag } from './tools/drag-edit.js';
-import { selectionTool } from './tools/selection.js';
+import { applyMemberSelectionCommand, selectionTool } from './tools/selection.js';
 import { memberTool } from './tools/member.js';
 import { surfaceTool } from './tools/surface.js';
 import { loadTool } from './tools/load.js';
@@ -419,10 +419,15 @@ export class ToolManager {
       this.deleteSelection();
     }
 
-    // Undo/Redo
+    // Undo/Redo, select all
     if (e.ctrlKey || e.metaKey) {
       const key = e.key.toLowerCase();
-      if (key === 'z' && !e.shiftKey) {
+      if (key === 'a' && !e.shiftKey && !e.altKey) {
+        // Plan only: the 3D tab keeps the browser's default behaviour.
+        if (this.canvas2d?.canvas?.hidden) return;
+        e.preventDefault();
+        this.runMemberSelectionCommand('all', { source: 'shortcut' });
+      } else if (key === 'z' && !e.shiftKey) {
         e.preventDefault();
         this.restoreHistory('undo');
       } else if (key === 'y' || (key === 'z' && e.shiftKey)) {
@@ -493,6 +498,19 @@ export class ToolManager {
     const changed = this.history[direction]();
     this.onUpdate();
     return changed;
+  }
+
+  // Select all / invert / connected members. Ends any drag, marquee or armed
+  // split point first so neither can act on or overwrite the new selection.
+  runMemberSelectionCommand(command, { source = 'menu' } = {}) {
+    this.cancelDrag();
+    const result = applyMemberSelectionCommand(this.state, command);
+    if (result.ok) {
+      this.cancelSplitPoint({ update: false });
+      this.onUpdate();
+    }
+    this.callbacks.onMemberSelectionCommand?.(command, result, source);
+    return result;
   }
 
   deleteSelection() {

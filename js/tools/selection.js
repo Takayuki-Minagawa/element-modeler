@@ -2,6 +2,65 @@ import { beginDrag, finishDrag, previewNode } from './drag-edit.js';
 
 import { applySnap } from '../grid.js';
 import { memberIdsInMarquee } from '../domain/marquee-selection.js';
+import { allSelectableMemberIds, connectedMemberIds, invertedMemberIds } from '../domain/member-selection.js';
+import { createNodePool } from '../analysis-export.js';
+import { resolveMemberEndZ } from '../quantities.js';
+
+export const MEMBER_SELECTION_COMMANDS = Object.freeze(['all', 'invert', 'connected']);
+
+function currentMemberIds(state) {
+  if (state.selectedMemberIds.length) return [...state.selectedMemberIds];
+  return state.selectedMemberId ? [state.selectedMemberId] : [];
+}
+
+// Connection keys match the analysis export: plan nodes are shared by every
+// level and the app also creates distinct nodes at one point (level copy,
+// rotate/mirror, samples), so ends are merged by 3D position within the
+// export's tolerance. A cross brace also links its mirrored diagonal.
+function memberEndpointKeyMap(state) {
+  const pool = createNodePool();
+  const keys = new Map();
+  for (const member of state.members) {
+    const n1 = state.getNode(member.startNodeId);
+    const n2 = state.getNode(member.endNodeId);
+    if (!n1 || !n2) continue;
+    const startZ = resolveMemberEndZ(state, member, 'start');
+    const endZ = resolveMemberEndZ(state, member, 'end');
+    const ids = [pool.idFor(n1.x, n1.y, startZ), pool.idFor(n2.x, n2.y, endZ)];
+    if (member.type === 'vbrace' && member.bracePattern === 'cross') {
+      ids.push(pool.idFor(n2.x, n2.y, startZ), pool.idFor(n1.x, n1.y, endZ));
+    }
+    keys.set(member.id, ids);
+  }
+  return keys;
+}
+
+// Applies one member selection command using the plan's visibility and layer
+// lock rules. Only the selection changes; the model and history do not.
+// Returns { ok, ids } or { ok: false, reason } when the selection is kept.
+export function applyMemberSelectionCommand(state, command) {
+  if (!MEMBER_SELECTION_COMMANDS.includes(command)) return { ok: false, reason: 'unknown' };
+  const isSelectable = member => state.isMemberSelectable(member);
+  let ids;
+  if (command === 'all') {
+    ids = allSelectableMemberIds(state.members, isSelectable);
+    if (!ids.length) return { ok: false, reason: 'noSelectableMembers' };
+  } else if (command === 'invert') {
+    if (!allSelectableMemberIds(state.members, isSelectable).length) return { ok: false, reason: 'noSelectableMembers' };
+    ids = invertedMemberIds(state.members, currentMemberIds(state), isSelectable);
+  } else {
+    const seeds = currentMemberIds(state).filter(id => {
+      const member = state.getMember(id);
+      return member && isSelectable(member);
+    });
+    if (!seeds.length) return { ok: false, reason: 'noMemberSelected' };
+    const keys = memberEndpointKeyMap(state);
+    ids = connectedMemberIds(state.members, seeds, {
+      isSelectable, endpointKeys: member => keys.get(member.id) || [],
+    });
+  }
+  return { ok: true, ids: state.selectMembers(ids) };
+}
 
 // ToolManager delegates to these cohesive behaviors; this is the existing host.
 export const selectionTool = {
