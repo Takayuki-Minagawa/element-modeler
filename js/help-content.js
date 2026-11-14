@@ -30,6 +30,7 @@ export const helpContentJa = `
   <tr><td><b>支点配置</b></td><td>「支点」ツール(Sキー)でキャンバス上をクリック。プロパティパネルで6自由度(DX/DY/DZ/RX/RY/RZ)を設定</td></tr>
   <tr><td><b>選択</b></td><td>「要素」ツール(Vキー)で線材・面材・荷重・支点をクリック。3D表示でも部材・面材をクリックで選択できます</td></tr>
   <tr><td><b>複数選択</b></td><td>Shift+クリックで線材を追加/解除。空白から左→右へドラッグすると、青い実線枠に全体が入った線材を選択。右→左は緑の破線枠に触れる・交差する線材も選択します。Shift+ドラッグで追加、Escで範囲選択を中止。非表示や他レイヤー選択ロック中の線材は対象外です。右パネルで一括断面変更・ミラー・回転・配列複製・一括削除</td></tr>
+  <tr><td><b>線材の一括選択</b></td><td>「編集」メニューの「線材の選択」から、表示中の線材をすべて選択（平面表示で<kbd>Ctrl+A</kbd>）・選択を反転・接続する線材を選択できます。接続は選択中の線材から端部の節点と高さを共有する線材をたどります。柱は下端・上端の階で梁とつながり、平面位置が同じでも別の階の梁はつながりません。非表示や他レイヤー選択ロック中の線材は対象外で、たどる経路にも使いません。面材・荷重・支点は対象外で、モデルとUndo/Redo履歴は変わりません</td></tr>
   <tr><td><b>線材の連結</b></td><td>一直線に連続する梁、または上下に連続する柱を2本以上選び、右パネルの「連結」をクリック。断面が異なる場合は連結後の断面を選択</td></tr>
   <tr><td><b>線材の分割</b></td><td>梁または柱を1本選び、右パネルの「分割」をクリック。梁は部材上の分割点をクリック（Escでキャンセル）、柱は中間レイヤーを選択</td></tr>
   <tr><td><b>計測</b></td><td>「計測」ツール(Dキー)で2点をクリックすると距離・dX・dYを表示。Escで消去</td></tr>
@@ -85,6 +86,7 @@ export const helpContentJa = `
   <tr><td><kbd>Enter</kbd></td><td>面材ポリラインを閉じて確定</td></tr>
   <tr><td><kbd>Esc</kbd></td><td>キャンセル / 選択解除 / モーダルを閉じる</td></tr>
   <tr><td><kbd>Delete</kbd></td><td>選択要素を削除</td></tr>
+  <tr><td><kbd>Ctrl+A</kbd></td><td>表示中の線材をすべて選択（平面表示）</td></tr>
   <tr><td><kbd>Ctrl+Z</kbd></td><td>元に戻す</td></tr>
   <tr><td><kbd>Ctrl+Y</kbd></td><td>やり直し</td></tr>
   <tr><td><kbd>Shift</kbd></td><td>角度制限（0/45/90°）</td></tr>
@@ -193,6 +195,7 @@ export const helpContentEn = `
   <tr><td><b>Place support</b></td><td>Use "Support" (S). Click to place. Edit 6 DOFs (DX/DY/DZ/RX/RY/RZ) in the property panel</td></tr>
   <tr><td><b>Select</b></td><td>Use "Element" tool (V key), click a line/surface/load/support element. Members and surfaces can also be picked by clicking in the 3D view</td></tr>
   <tr><td><b>Multi-select</b></td><td>Shift+click toggles members. Drag from empty space left to right for a blue solid window selecting fully enclosed members; drag right to left for a green dashed crossing window that also selects members touching or crossing its border. Shift+drag adds to the selection; Esc cancels the rectangle. Hidden members and members locked on other layers are excluded. The panel offers batch section change, mirror, rotate, array copy, and batch delete</td></tr>
+  <tr><td><b>Bulk member selection</b></td><td>From Edit &gt; Member selection, select all visible members (<kbd>Ctrl+A</kbd> in the plan view), invert the member selection, or select connected members. Connected selection follows members that share an end node at the same elevation. Columns link beams at their base and top levels; beams on different levels at the same plan position are not linked. Hidden members and members on locked layers are skipped and never bridge groups. Surfaces, loads and supports are not included, and the model and Undo/Redo history are unchanged</td></tr>
   <tr><td><b>Join members</b></td><td>Select two or more collinear connected beams, or vertically adjacent columns, then click "Join" in the right panel. If their sections differ, select the section for the joined member</td></tr>
   <tr><td><b>Split member</b></td><td>Select one beam or column and click "Split" in the right panel. For a beam, click the split point on the member (Esc cancels); for a column, select an intermediate level</td></tr>
   <tr><td><b>Measure</b></td><td>Use "Measure" (D). Click two points to show length, dX, and dY. Esc clears</td></tr>
@@ -248,6 +251,7 @@ export const helpContentEn = `
   <tr><td><kbd>Enter</kbd></td><td>Close and confirm surface polyline</td></tr>
   <tr><td><kbd>Esc</kbd></td><td>Cancel / Deselect / Close modal</td></tr>
   <tr><td><kbd>Delete</kbd></td><td>Delete selected element</td></tr>
+  <tr><td><kbd>Ctrl+A</kbd></td><td>Select all visible members (plan view)</td></tr>
   <tr><td><kbd>Ctrl+Z</kbd></td><td>Undo</td></tr>
   <tr><td><kbd>Ctrl+Y</kbd></td><td>Redo</td></tr>
   <tr><td><kbd>Shift</kbd></td><td>Angle constraint (0/45/90°)</td></tr>

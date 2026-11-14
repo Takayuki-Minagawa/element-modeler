@@ -2,6 +2,55 @@ import { beginDrag, finishDrag, previewNode } from './drag-edit.js';
 
 import { applySnap } from '../grid.js';
 import { memberIdsInMarquee } from '../domain/marquee-selection.js';
+import {
+  allSelectableMemberIds, connectedMemberIds, invertedMemberIds, memberEndpointKey,
+} from '../domain/member-selection.js';
+import { resolveMemberEndZ } from '../quantities.js';
+
+export const MEMBER_SELECTION_COMMANDS = Object.freeze(['all', 'invert', 'connected']);
+
+function currentMemberIds(state) {
+  if (state.selectedMemberIds.length) return [...state.selectedMemberIds];
+  return state.selectedMemberId ? [state.selectedMemberId] : [];
+}
+
+// Connection keys follow the analysis export: each end sits at its plan node
+// and resolved elevation; a cross brace also links its mirrored diagonal.
+function memberEndpointKeys(state, member) {
+  const startZ = resolveMemberEndZ(state, member, 'start');
+  const endZ = resolveMemberEndZ(state, member, 'end');
+  const keys = [memberEndpointKey(member.startNodeId, startZ), memberEndpointKey(member.endNodeId, endZ)];
+  if (member.type === 'vbrace' && member.bracePattern === 'cross') {
+    keys.push(memberEndpointKey(member.endNodeId, startZ), memberEndpointKey(member.startNodeId, endZ));
+  }
+  return keys;
+}
+
+// Applies one member selection command using the plan's visibility and layer
+// lock rules. Only the selection changes; the model and history do not.
+// Returns { ok, ids } or { ok: false, reason } when the selection is kept.
+export function applyMemberSelectionCommand(state, command) {
+  if (!MEMBER_SELECTION_COMMANDS.includes(command)) return { ok: false, reason: 'unknown' };
+  const isSelectable = member => state.isMemberSelectable(member);
+  let ids;
+  if (command === 'all') {
+    ids = allSelectableMemberIds(state.members, isSelectable);
+    if (!ids.length) return { ok: false, reason: 'noSelectableMembers' };
+  } else if (command === 'invert') {
+    if (!allSelectableMemberIds(state.members, isSelectable).length) return { ok: false, reason: 'noSelectableMembers' };
+    ids = invertedMemberIds(state.members, currentMemberIds(state), isSelectable);
+  } else {
+    const seeds = currentMemberIds(state).filter(id => {
+      const member = state.getMember(id);
+      return member && isSelectable(member);
+    });
+    if (!seeds.length) return { ok: false, reason: 'noMemberSelected' };
+    ids = connectedMemberIds(state.members, seeds, {
+      isSelectable, endpointKeys: member => memberEndpointKeys(state, member),
+    });
+  }
+  return { ok: true, ids: state.selectMembers(ids) };
+}
 
 // ToolManager delegates to these cohesive behaviors; this is the existing host.
 export const selectionTool = {

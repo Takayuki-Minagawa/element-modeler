@@ -350,6 +350,18 @@ toolManager = new ToolManager(canvas2d, state, history, update, {
   onSplitPointFailed() {
     showNotice(t('splitMemberFailed'), 'error');
   },
+  onMemberSelectionCommand(command, result) {
+    if (!result.ok) {
+      if (result.reason !== 'unknown') showNotice(t(result.reason === 'noMemberSelected' ? 'selectionNeedsMember' : 'selectionNoMembers'), 'error');
+      return;
+    }
+    // Ctrl+A stays quiet; the menu commands report the resulting count.
+    if (command !== 'all') showNotice(t('selectionMembersDone', { n: result.ids.length }), 'success');
+  },
+});
+
+document.querySelectorAll('[data-member-selection]').forEach(button => {
+  button.addEventListener('click', () => toolManager.runMemberSelectionCommand(button.dataset.memberSelection));
 });
 
 planNavigation = initPlanNavigation({ state, canvas2d, toolManager, onUpdate: update });
